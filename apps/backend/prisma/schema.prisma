@@ -1,0 +1,243 @@
+// Prisma schema for UTx
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id                   String              @id @default(cuid())
+  phoneNumber          String?             @unique
+  appleId              String?             @unique
+  googleId             String?             @unique
+  firebaseUid          String              @unique
+  name                 String
+  avatarUrl            String?
+  heightCm             Float
+  weightKg             Float
+  birthDate            DateTime
+  gender               Gender
+  maxHr                Int
+  stravaConnected      Boolean             @default(false)
+  stravaRefreshToken   String?
+  stravaAccessToken    String?
+  stravaTokenExpiresAt DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  // Relations
+  workouts             Workout[]
+  clubMemberships      ClubMembership[]
+  squadMemberships     SquadMembership[]
+  following            Follow[]            @relation("follower")
+  followers            Follow[]            @relation("following")
+  personalBests        PersonalBest[]
+  workoutReactions     WorkoutReaction[]
+  workoutComments      WorkoutComment[]
+
+  @@map("users")
+}
+
+enum Gender {
+  male
+  female
+  prefer_not_to_say
+}
+
+// Workout model
+model Workout {
+  id                  String              @id @default(cuid())
+  userId              String
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutType         WorkoutType
+  totalTimeSeconds    Float
+  totalDistanceMetres Int
+  averageSplitSeconds Float               // per 500m
+  averageRate         Float               // spm
+  averageWatts        Float?
+  calories            Int?
+  avgHeartRate        Int?
+  maxHeartRate        Int?
+  dragFactor          Int?
+  effortScore         Float?              // 0-10
+  intervals           Json?               // WorkoutInterval[]
+  hrData              Json?               // HrDataPoint[]
+  photoUrl            String?
+  aiInsight           String?
+  isPb                Boolean             @default(false)
+  pbCategory          String?
+  stravaActivityId    String?
+  squadId             String?
+  squad               Squad?              @relation(fields: [squadId], references: [id])
+  notes               String?
+  workoutDate         DateTime
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  // Relations
+  reactions           WorkoutReaction[]
+  comments            WorkoutComment[]
+  personalBest        PersonalBest?
+
+  @@index([userId, workoutDate])
+  @@index([workoutType])
+  @@map("workouts")
+}
+
+enum WorkoutType {
+  five_hundred
+  one_thousand
+  two_thousand
+  five_thousand
+  six_thousand
+  ten_thousand
+  half_marathon
+  marathon
+  one_minute
+  steady_state
+  intervals
+  custom
+}
+
+// Club model
+model Club {
+  id         String           @id @default(cuid())
+  name       String
+  location   String?
+  verified   Boolean          @default(false)
+  inviteCode String           @unique
+  createdAt  DateTime         @default(now())
+
+  // Relations
+  memberships ClubMembership[]
+  squads      Squad[]
+
+  @@map("clubs")
+}
+
+// Squad model
+model Squad {
+  id         String            @id @default(cuid())
+  clubId     String
+  club       Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  name       String
+  inviteCode String            @unique
+  createdAt  DateTime          @default(now())
+
+  // Relations
+  memberships SquadMembership[]
+  workouts    Workout[]
+
+  @@map("squads")
+}
+
+// Club membership
+model ClubMembership {
+  id       String   @id @default(cuid())
+  clubId   String
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     ClubRole @default(member)
+  joinedAt DateTime @default(now())
+
+  @@unique([clubId, userId])
+  @@map("club_memberships")
+}
+
+enum ClubRole {
+  admin
+  member
+}
+
+// Squad membership
+model SquadMembership {
+  id       String    @id @default(cuid())
+  squadId  String
+  squad    Squad     @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     SquadRole @default(member)
+  joinedAt DateTime  @default(now())
+
+  @@unique([squadId, userId])
+  @@map("squad_memberships")
+}
+
+enum SquadRole {
+  captain
+  member
+}
+
+// Follow relationship
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+// Personal bests
+model PersonalBest {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      PbCategory
+  timeSeconds   Float?     // for distance-based
+  distanceMetres Int?      // for time-based (1 minute)
+  achievedAt    DateTime
+  workoutId     String     @unique
+  workout       Workout    @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+  @@map("personal_bests")
+}
+
+enum PbCategory {
+  five_hundred
+  one_thousand
+  two_thousand
+  five_thousand
+  six_thousand
+  ten_thousand
+  half_marathon
+  marathon
+  one_minute
+}
+
+// Workout reactions (fire emoji)
+model WorkoutReaction {
+  id        String   @id @default(cuid())
+  workoutId String
+  workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([workoutId, userId])
+  @@map("workout_reactions")
+}
+
+// Workout comments
+model WorkoutComment {
+  id        String   @id @default(cuid())
+  workoutId String
+  workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([workoutId])
+  @@map("workout_comments")
+}

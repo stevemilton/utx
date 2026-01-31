@@ -1,0 +1,25 @@
+{
+  "name": "utx",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "yarn workspace @utx/mobile",
+    "backend": "yarn workspace @utx/backend",
+    "shared": "yarn workspace @utx/shared",
+    "dev:mobile": "yarn workspace @utx/mobile start",
+    "dev:backend": "yarn workspace @utx/backend dev",
+    "build:backend": "yarn workspace @utx/backend build",
+    "db:migrate": "yarn workspace @utx/backend db:migrate",
+    "db:generate": "yarn workspace @utx/backend db:generate"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

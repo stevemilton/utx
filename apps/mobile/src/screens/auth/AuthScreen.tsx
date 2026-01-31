@@ -1,0 +1,278 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { Button } from '../../components';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import { useAuthStore } from '../../stores/authStore';
+import { api } from '../../services/api';
+import { firebaseAuth } from '../../services/firebase';
+import type { AuthScreenProps } from '../../navigation/types';
+
+export const AuthScreen: React.FC = () => {
+  const navigation = useNavigation<AuthScreenProps<'Auth'>['navigation']>();
+  const { login, setHasCompletedOnboarding } = useAuthStore();
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleAuthSuccess = async (
+    firebaseToken: string,
+    isNewUser: boolean,
+    displayName?: string,
+    email?: string
+  ) => {
+    try {
+      // Register/login with our backend
+      const response = await api.register({
+        firebaseToken,
+        name: displayName || '',
+        heightCm: 0, // Will be set in onboarding
+        weightKg: 0,
+        birthDate: '',
+        gender: '',
+        maxHr: 0,
+      });
+
+      if (response.success && response.data) {
+        const { user } = response.data as any;
+
+        // Store auth state
+        login(user, firebaseToken);
+
+        // If existing user with completed profile, skip onboarding
+        if (!isNewUser && user.hasCompletedOnboarding) {
+          setHasCompletedOnboarding(true);
+        }
+        // Otherwise, they'll be directed to onboarding via navigation state
+      } else {
+        Alert.alert('Error', response.error || 'Failed to complete sign in');
+      }
+    } catch (error) {
+      console.error('Backend registration error:', error);
+      Alert.alert('Error', 'Failed to complete sign in. Please try again.');
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      setIsAppleLoading(true);
+
+      const result = await firebaseAuth.signInWithApple();
+
+      if (result.success && result.user && result.token) {
+        await handleAuthSuccess(
+          result.token,
+          result.isNewUser ?? false,
+          result.user.displayName ?? undefined,
+          result.user.email ?? undefined
+        );
+      } else if (result.error && result.error !== 'Sign in cancelled') {
+        Alert.alert('Error', result.error);
+      }
+    } catch (error: any) {
+      console.error('Apple Sign In error:', error);
+      Alert.alert('Error', 'Apple Sign In failed. Please try again.');
+    } finally {
+      setIsAppleLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsGoogleLoading(true);
+
+      const result = await firebaseAuth.signInWithGoogle();
+
+      if (result.success && result.user && result.token) {
+        await handleAuthSuccess(
+          result.token,
+          result.isNewUser ?? false,
+          result.user.displayName ?? undefined,
+          result.user.email ?? undefined
+        );
+      } else if (result.error) {
+        Alert.alert('Info', result.error);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Google Sign In failed. Please try again.');
+      console.error('Google Sign In error:', error);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handlePhoneSignIn = () => {
+    navigation.navigate('PhoneAuth');
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Text style={styles.backText}>← Back</Text>
+      </TouchableOpacity>
+
+      <View style={styles.content}>
+        <Text style={styles.title}>Create your account</Text>
+        <Text style={styles.subtitle}>
+          Sign in to start tracking your erg sessions
+        </Text>
+
+        {/* Auth buttons */}
+        <View style={styles.authButtons}>
+          {/* Apple Sign In (iOS only) */}
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={styles.appleButtonContainer}
+              onPress={handleAppleSignIn}
+              disabled={isAppleLoading}
+            >
+              {isAppleLoading ? (
+                <View style={styles.loadingButton}>
+                  <ActivityIndicator color={colors.background} />
+                </View>
+              ) : (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                  cornerRadius={borderRadius.lg}
+                  style={styles.appleButton}
+                  onPress={handleAppleSignIn}
+                />
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* Google Sign In */}
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={handleGoogleSignIn}
+            disabled={isGoogleLoading}
+          >
+            {isGoogleLoading ? (
+              <ActivityIndicator color={colors.textPrimary} />
+            ) : (
+              <>
+                <View style={styles.socialIconPlaceholder}>
+                  <Text style={styles.socialIconText}>G</Text>
+                </View>
+                <Text style={styles.socialButtonText}>Continue with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Phone Sign In */}
+          <TouchableOpacity
+            style={[styles.socialButton, styles.phoneButton]}
+            onPress={handlePhoneSignIn}
+          >
+            <View style={styles.socialIconPlaceholder}>
+              <Text style={styles.socialIconText}>📱</Text>
+            </View>
+            <Text style={styles.socialButtonText}>Continue with Phone</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Terms */}
+        <Text style={styles.terms}>
+          By continuing, you agree to our{' '}
+          <Text style={styles.link}>Terms of Service</Text> and{' '}
+          <Text style={styles.link}>Privacy Policy</Text>
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: spacing.lg,
+  },
+  backButton: {
+    marginBottom: spacing.lg,
+  },
+  backText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+  },
+  content: {
+    flex: 1,
+  },
+  title: {
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxl,
+  },
+  authButtons: {
+    gap: spacing.md,
+  },
+  appleButtonContainer: {
+    height: 56,
+    width: '100%',
+  },
+  appleButton: {
+    height: 56,
+    width: '100%',
+  },
+  loadingButton: {
+    height: 56,
+    width: '100%',
+    backgroundColor: colors.textPrimary,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    height: 56,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  phoneButton: {
+    backgroundColor: colors.backgroundTertiary,
+    borderColor: colors.border,
+  },
+  socialIconPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialIconText: {
+    fontSize: 14,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  socialButtonText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.textPrimary,
+  },
+  terms: {
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.xxl,
+    lineHeight: 20,
+  },
+  link: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
+});
