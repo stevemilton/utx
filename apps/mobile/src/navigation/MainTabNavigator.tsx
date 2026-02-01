@@ -24,20 +24,16 @@ const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }
   };
 
   return (
-    <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
-      <View style={styles.iconText}>
-        <View>
-          <View style={{ opacity: focused ? 1 : 0.6 }}>
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              {/* Placeholder - replace with actual icons */}
-              <View
-                style={[
-                  styles.iconPlaceholder,
-                  focused && styles.iconPlaceholderFocused,
-                ]}
-              />
-            </View>
-          </View>
+    <View style={[styles.iconContainer, focused ? styles.iconContainerFocused : undefined]}>
+      <View style={{ opacity: focused ? 1 : 0.6 }}>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          {/* Placeholder - replace with actual icons */}
+          <View
+            style={[
+              styles.iconPlaceholder,
+              focused ? styles.iconPlaceholderFocused : undefined,
+            ]}
+          />
         </View>
       </View>
     </View>
@@ -127,9 +123,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconContainerFocused: {},
-  iconText: {
-    fontSize: 22,
-  },
   iconPlaceholder: {
     width: 24,
     height: 24,

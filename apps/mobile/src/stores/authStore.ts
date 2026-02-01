@@ -27,6 +27,7 @@ interface AuthState {
   setToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
   setOnboardingComplete: (complete: boolean) => void;
+  setHasCompletedOnboarding: (complete: boolean) => void;
   login: (user: UserProfile, token: string) => void;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
@@ -50,6 +51,9 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (isLoading) => set({ isLoading }),
 
       setOnboardingComplete: (hasCompletedOnboarding) =>
+        set({ hasCompletedOnboarding }),
+
+      setHasCompletedOnboarding: (hasCompletedOnboarding) =>
         set({ hasCompletedOnboarding }),
 
       login: (user, token) =>

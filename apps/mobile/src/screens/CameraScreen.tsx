@@ -73,7 +73,7 @@ export const CameraScreen: React.FC = () => {
     try {
       // Read the file as base64
       const base64 = await FileSystem.readAsStringAsync(capturedPhoto, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
 
       // Send to OCR endpoint

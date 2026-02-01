@@ -16,8 +16,12 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 
-// Complete pending auth sessions
-WebBrowser.maybeCompleteAuthSession();
+// Complete pending auth sessions - wrap in try-catch to prevent crash on startup
+try {
+  WebBrowser.maybeCompleteAuthSession();
+} catch (e) {
+  console.warn('WebBrowser.maybeCompleteAuthSession failed:', e);
+}
 
 // Firebase configuration from GoogleService-Info.plist
 const firebaseConfig = {
@@ -50,27 +54,44 @@ export interface PhoneVerificationResult {
 }
 
 class FirebaseAuthService {
-  private app: FirebaseApp;
-  private auth: Auth;
+  private app: FirebaseApp | null = null;
+  private auth: Auth | null = null;
   private confirmationResult: ConfirmationResult | null = null;
+  private initError: Error | null = null;
 
   constructor() {
-    // Initialize Firebase
-    if (getApps().length === 0) {
-      this.app = initializeApp(firebaseConfig);
-    } else {
-      this.app = getApp();
+    try {
+      // Initialize Firebase
+      if (getApps().length === 0) {
+        this.app = initializeApp(firebaseConfig);
+      } else {
+        this.app = getApp();
+      }
+      this.auth = getAuth(this.app);
+    } catch (error) {
+      console.error('Firebase initialization error:', error);
+      this.initError = error instanceof Error ? error : new Error('Firebase initialization failed');
     }
-    this.auth = getAuth(this.app);
+  }
+
+  private ensureInitialized(): void {
+    if (this.initError) {
+      throw this.initError;
+    }
+    if (!this.app || !this.auth) {
+      throw new Error('Firebase not initialized');
+    }
   }
 
   // Get current user
   getCurrentUser(): User | null {
+    if (!this.auth) return null;
     return this.auth.currentUser;
   }
 
   // Get ID token for API calls
   async getIdToken(): Promise<string | null> {
+    if (!this.auth) return null;
     const user = this.auth.currentUser;
     if (!user) return null;
     return user.getIdToken();
@@ -78,6 +99,11 @@ class FirebaseAuthService {
 
   // Listen to auth state changes
   onAuthStateChanged(callback: (user: User | null) => void) {
+    if (!this.auth) {
+      // Return a no-op unsubscribe function
+      console.warn('Firebase not initialized, cannot listen to auth state');
+      return () => {};
+    }
     return this.auth.onAuthStateChanged(callback);
   }
 
@@ -124,7 +150,8 @@ class FirebaseAuthService {
       });
 
       // Sign in to Firebase
-      const userCredential = await signInWithCredential(this.auth, credential);
+      this.ensureInitialized();
+      const userCredential = await signInWithCredential(this.auth!, credential);
       const token = await userCredential.user.getIdToken();
 
       // Check if this is a new user
@@ -172,7 +199,8 @@ class FirebaseAuthService {
       const credential = GoogleAuthProvider.credential(idToken);
 
       // Sign in to Firebase
-      const userCredential = await signInWithCredential(this.auth, credential);
+      this.ensureInitialized();
+      const userCredential = await signInWithCredential(this.auth!, credential);
       const token = await userCredential.user.getIdToken();
 
       return {
@@ -206,8 +234,9 @@ class FirebaseAuthService {
 
       // For React Native, we need to use signInWithPhoneNumber
       // This will trigger Firebase's built-in reCAPTCHA verification
+      this.ensureInitialized();
       const confirmationResult = await signInWithPhoneNumber(
-        this.auth,
+        this.auth!,
         formattedNumber
       );
 
@@ -293,13 +322,18 @@ class FirebaseAuthService {
 
   // Sign out
   async signOut(): Promise<void> {
-    await this.auth.signOut();
+    if (this.auth) {
+      await this.auth.signOut();
+    }
     this.confirmationResult = null;
   }
 
   // Delete account
   async deleteAccount(): Promise<{ success: boolean; error?: string }> {
     try {
+      if (!this.auth) {
+        return { success: false, error: 'Firebase not initialized' };
+      }
       const user = this.auth.currentUser;
       if (!user) {
         return { success: false, error: 'No user signed in' };
