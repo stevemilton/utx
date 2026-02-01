@@ -86,9 +86,11 @@ export const CameraScreen: React.FC = () => {
           photoUri: capturedPhoto,
         });
       } else {
+        // Show the actual error from the API for debugging
+        const errorMsg = ocrResponse.error || 'Could not read the erg screen';
         Alert.alert(
           'OCR Failed',
-          'Could not read the erg screen. Would you like to enter the data manually?',
+          `${errorMsg}. Would you like to enter the data manually?`,
           [
             {
               text: 'Try Again',
@@ -107,14 +109,15 @@ export const CameraScreen: React.FC = () => {
     } catch (error: any) {
       console.error('OCR processing failed:', error);
 
-      // Provide more helpful error messages
+      // Show actual error message for debugging
+      const errorMsg = error?.message || 'Unknown error';
       let errorTitle = 'Processing Error';
-      let errorMessage = 'Failed to process the image. Would you like to try again or enter data manually?';
+      let errorMessage = `${errorMsg}. Would you like to try again or enter data manually?`;
 
-      if (error?.message?.includes('timed out')) {
+      if (errorMsg.includes('timed out') || errorMsg.includes('aborted')) {
         errorTitle = 'Request Timed Out';
         errorMessage = 'The image processing took too long. Try with a clearer photo or enter data manually.';
-      } else if (error?.message?.includes('Network')) {
+      } else if (errorMsg.includes('Network') || errorMsg.includes('fetch')) {
         errorTitle = 'Network Error';
         errorMessage = 'Could not connect to the server. Check your internet connection and try again.';
       }
