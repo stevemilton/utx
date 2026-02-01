@@ -16,13 +16,15 @@ model User {
   appleId              String?             @unique
   googleId             String?             @unique
   firebaseUid          String              @unique
+  email                String?
   name                 String
   avatarUrl            String?
-  heightCm             Float
-  weightKg             Float
-  birthDate            DateTime
-  gender               Gender
-  maxHr                Int
+  heightCm             Float               @default(0)
+  weightKg             Float               @default(0)
+  birthDate            DateTime?
+  gender               Gender?
+  maxHr                Int                 @default(0)
+  hasCompletedOnboarding Boolean           @default(false)
   stravaConnected      Boolean             @default(false)
   stravaRefreshToken   String?
   stravaAccessToken    String?
