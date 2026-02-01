@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { Button } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useAuthStore } from '../../stores/authStore';
@@ -10,11 +12,56 @@ import { api } from '../../services/api';
 import { firebaseAuth } from '../../services/firebase';
 import type { AuthScreenProps } from '../../navigation/types';
 
+// Required for expo-auth-session
+WebBrowser.maybeCompleteAuthSession();
+
 export const AuthScreen: React.FC = () => {
   const navigation = useNavigation<AuthScreenProps<'Auth'>['navigation']>();
   const { login, setHasCompletedOnboarding } = useAuthStore();
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Google OAuth configuration
+  const googleConfig = firebaseAuth.getGoogleAuthConfig();
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    iosClientId: googleConfig.iosClientId,
+    webClientId: googleConfig.webClientId,
+  });
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleToken(id_token);
+    } else if (response?.type === 'error') {
+      setIsGoogleLoading(false);
+      Alert.alert('Error', 'Google Sign In failed. Please try again.');
+    } else if (response?.type === 'dismiss') {
+      setIsGoogleLoading(false);
+    }
+  }, [response]);
+
+  const handleGoogleToken = async (idToken: string) => {
+    try {
+      const result = await firebaseAuth.signInWithGoogle(idToken);
+
+      if (result.success && result.user && result.token) {
+        await handleAuthSuccess(
+          result.token,
+          result.isNewUser ?? false,
+          result.user.displayName ?? undefined,
+          result.user.email ?? undefined
+        );
+      } else if (result.error) {
+        Alert.alert('Error', result.error);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Google Sign In failed. Please try again.');
+      console.error('Google Sign In error:', error);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleAuthSuccess = async (
     firebaseToken: string,
@@ -79,27 +126,10 @@ export const AuthScreen: React.FC = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    try {
-      setIsGoogleLoading(true);
-
-      const result = await firebaseAuth.signInWithGoogle();
-
-      if (result.success && result.user && result.token) {
-        await handleAuthSuccess(
-          result.token,
-          result.isNewUser ?? false,
-          result.user.displayName ?? undefined,
-          result.user.email ?? undefined
-        );
-      } else if (result.error) {
-        Alert.alert('Info', result.error);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Google Sign In failed. Please try again.');
-      console.error('Google Sign In error:', error);
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    setIsGoogleLoading(true);
+    // This triggers the OAuth flow via expo-auth-session
+    // The response is handled in the useEffect above
+    promptAsync();
   };
 
   const handlePhoneSignIn = () => {
@@ -148,7 +178,7 @@ export const AuthScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.socialButton}
             onPress={handleGoogleSignIn}
-            disabled={isGoogleLoading}
+            disabled={!request || isGoogleLoading}
           >
             {isGoogleLoading ? (
               <ActivityIndicator color={colors.textPrimary} />

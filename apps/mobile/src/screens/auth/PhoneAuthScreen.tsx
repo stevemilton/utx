@@ -25,10 +25,10 @@ export const PhoneAuthScreen: React.FC = () => {
 
       const result = await firebaseAuth.sendPhoneVerificationCode(phoneNumber);
 
-      if (result.success && result.verificationId) {
+      if (result.success) {
+        // confirmationResult is stored in the firebase service
         navigation.navigate('VerifyCode', {
           phoneNumber,
-          verificationId: result.verificationId,
         });
       } else {
         Alert.alert('Error', result.error || 'Failed to send verification code');

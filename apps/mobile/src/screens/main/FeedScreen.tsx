@@ -87,9 +87,26 @@ export const FeedScreen: React.FC = () => {
   };
 
   const handleReactionPress = async (workoutId: string) => {
+    // Find current reaction state before toggling
+    const currentFeed = getCurrentFeed();
+    const workout = currentFeed.find(w => w.id === workoutId);
+    const wasReacted = workout?.hasUserReacted ?? false;
+
+    // Optimistically toggle locally
     toggleReaction(workoutId);
-    // TODO: Call API
-    await api.addReaction(workoutId);
+
+    // Sync with backend
+    try {
+      if (wasReacted) {
+        await api.removeReaction(workoutId);
+      } else {
+        await api.addReaction(workoutId);
+      }
+    } catch (error) {
+      // Revert on failure
+      toggleReaction(workoutId);
+      console.error('Reaction failed:', error);
+    }
   };
 
   const handleCommentPress = (workoutId: string) => {

@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.anonymous.utx"
+  },
+  "ios": {
+    "bundleIdentifier": "com.anonymous.utx"
+  }
+}

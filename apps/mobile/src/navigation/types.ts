@@ -7,7 +7,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   Auth: undefined;
   PhoneAuth: undefined;
-  VerifyCode: { phoneNumber: string; verificationId: string };
+  VerifyCode: { phoneNumber: string };
 };
 
 // Onboarding Stack

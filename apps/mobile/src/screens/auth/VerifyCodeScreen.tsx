@@ -14,7 +14,7 @@ const CODE_LENGTH = 6;
 export const VerifyCodeScreen: React.FC = () => {
   const navigation = useNavigation<AuthScreenProps<'VerifyCode'>['navigation']>();
   const route = useRoute<AuthScreenProps<'VerifyCode'>['route']>();
-  const { phoneNumber, verificationId } = route.params;
+  const { phoneNumber } = route.params;
 
   const { login, setHasCompletedOnboarding } = useAuthStore();
   const [code, setCode] = useState('');
@@ -55,8 +55,8 @@ export const VerifyCodeScreen: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Verify the code with Firebase
-      const result = await firebaseAuth.verifyPhoneCode(verificationId, verificationCode);
+      // Verify the code with Firebase (verificationId is stored in the service)
+      const result = await firebaseAuth.verifyPhoneCode(verificationCode);
 
       if (result.success && result.user && result.token) {
         // Register/login with our backend
