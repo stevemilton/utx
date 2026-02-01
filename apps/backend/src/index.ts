@@ -35,6 +35,8 @@ const server = Fastify({
           }
         : undefined,
   },
+  // Increase body size limit for OCR endpoint (base64 images can be 5-10MB)
+  bodyLimit: 15 * 1024 * 1024, // 15MB
 });
 
 // Plugins

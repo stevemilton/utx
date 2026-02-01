@@ -529,6 +529,8 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     async (request: FastifyRequest<{ Body: OcrBody }>, reply: FastifyReply) => {
       const { imageBase64 } = request.body;
 
+      request.log.info(`OCR request received, image size: ${imageBase64?.length || 0} chars`);
+
       // Check if OpenAI API key is configured
       if (!process.env.OPENAI_API_KEY) {
         request.log.error('OPENAI_API_KEY not configured');
@@ -540,11 +542,14 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
 
       // Validate base64 image
       if (!imageBase64 || imageBase64.length < 100) {
+        request.log.error(`Invalid image data: length=${imageBase64?.length || 0}`);
         return reply.status(400).send({
           success: false,
           error: 'Invalid image data',
         });
       }
+
+      request.log.info('Sending image to OpenAI GPT-4o Vision...');
 
       try {
         const response = await openai.chat.completions.create({
@@ -601,12 +606,14 @@ Only return valid JSON, no other text.`,
 
         const ocrData = JSON.parse(jsonMatch[0]);
 
+        request.log.info('OCR successful, returning data');
+
         return reply.send({
           success: true,
           data: { ocrData },
         });
       } catch (error: any) {
-        request.log.error(error, 'OCR processing failed');
+        request.log.error({ err: error, code: error?.code, message: error?.message }, 'OCR processing failed');
 
         // Provide more specific error messages
         let errorMessage = 'Failed to process image';
