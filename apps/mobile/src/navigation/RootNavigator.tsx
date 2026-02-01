@@ -17,6 +17,9 @@ import { UserProfileScreen } from '../screens/UserProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ClubDetailScreen } from '../screens/ClubDetailScreen';
 import { SquadDetailScreen } from '../screens/SquadDetailScreen';
+import { ClubSearchScreen } from '../screens/ClubSearchScreen';
+import { EditProfileScreen } from '../screens/EditProfileScreen';
+import { AthleteSearchScreen } from '../screens/AthleteSearchScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -61,6 +64,9 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="ClubDetail" component={ClubDetailScreen} />
             <Stack.Screen name="SquadDetail" component={SquadDetailScreen} />
+            <Stack.Screen name="ClubSearch" component={ClubSearchScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
           </Stack.Group>
         </>
       )}

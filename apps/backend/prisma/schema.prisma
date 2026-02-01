@@ -17,7 +17,8 @@ model User {
   googleId             String?             @unique
   firebaseUid          String              @unique
   email                String?
-  name                 String
+  username             String?             @unique  // Optional unique handle (e.g., @speedyrow)
+  name                 String                       // Display name shown everywhere
   avatarUrl            String?
   heightCm             Float               @default(0)
   weightKg             Float               @default(0)
@@ -25,6 +26,7 @@ model User {
   gender               Gender?
   maxHr                Int                 @default(0)
   hasCompletedOnboarding Boolean           @default(false)
+  isPublic             Boolean             @default(true)
   stravaConnected      Boolean             @default(false)
   stravaRefreshToken   String?
   stravaAccessToken    String?

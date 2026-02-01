@@ -12,6 +12,7 @@ interface RequestOptions {
   body?: unknown;
   headers?: Record<string, string>;
   skipAuth?: boolean;
+  timeout?: number;
 }
 
 class ApiService {
@@ -28,7 +29,8 @@ class ApiService {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
-    const { method = 'GET', body, headers = {}, skipAuth = false } = options;
+    const { method = 'GET', body, headers = {}, skipAuth = false, timeout } = options;
+    const requestTimeout = timeout ?? this.timeout;
 
     const token = useAuthStore.getState().token;
 
@@ -42,7 +44,7 @@ class ApiService {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -135,6 +137,10 @@ class ApiService {
     return this.request(ENDPOINTS.social.following(userId));
   }
 
+  async searchUsers(query: string) {
+    return this.request(`${ENDPOINTS.users.search}?q=${encodeURIComponent(query)}`);
+  }
+
   async uploadAvatar(imageUri: string) {
     const token = useAuthStore.getState().token;
     const formData = new FormData();
@@ -197,9 +203,11 @@ class ApiService {
   }
 
   async processOcr(imageBase64: string) {
+    // Use longer timeout for OCR since GPT-4o Vision can take time
     return this.request<{ ocrData: Record<string, unknown> }>(ENDPOINTS.workouts.ocr, {
       method: 'POST',
       body: { imageBase64 },
+      timeout: 60000, // 60 seconds for OCR
     });
   }
 

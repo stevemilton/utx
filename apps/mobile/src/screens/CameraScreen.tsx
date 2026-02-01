@@ -104,11 +104,24 @@ export const CameraScreen: React.FC = () => {
           ]
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('OCR processing failed:', error);
+
+      // Provide more helpful error messages
+      let errorTitle = 'Processing Error';
+      let errorMessage = 'Failed to process the image. Would you like to try again or enter data manually?';
+
+      if (error?.message?.includes('timed out')) {
+        errorTitle = 'Request Timed Out';
+        errorMessage = 'The image processing took too long. Try with a clearer photo or enter data manually.';
+      } else if (error?.message?.includes('Network')) {
+        errorTitle = 'Network Error';
+        errorMessage = 'Could not connect to the server. Check your internet connection and try again.';
+      }
+
       Alert.alert(
-        'Processing Error',
-        'Failed to process the image. Would you like to try again or enter data manually?',
+        errorTitle,
+        errorMessage,
         [
           {
             text: 'Try Again',

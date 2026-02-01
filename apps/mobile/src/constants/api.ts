@@ -36,6 +36,7 @@ export const ENDPOINTS = {
     profile: (id: string) => `/users/${id}`,
     updateProfile: '/users/me',
     updateAvatar: '/users/me/avatar',
+    search: '/users/search',
   },
 
   // Workouts

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../services/api';
@@ -83,7 +84,7 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
           <TouchableOpacity onPress={handleSettings}>
-            <Text style={styles.settingsIcon}>⚙️</Text>
+            <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -146,7 +147,7 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Connections</Text>
           <TouchableOpacity style={styles.connectionItem}>
             <View style={styles.connectionIcon}>
-              <Text>🏃</Text>
+              <Ionicons name="fitness-outline" size={20} color={colors.textPrimary} />
             </View>
             <View style={styles.connectionInfo}>
               <Text style={styles.connectionName}>Strava</Text>
@@ -154,7 +155,7 @@ export const ProfileScreen: React.FC = () => {
                 {user?.stravaConnected ? 'Connected' : 'Not connected'}
               </Text>
             </View>
-            <Text style={styles.connectionArrow}>→</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
         </View>
 

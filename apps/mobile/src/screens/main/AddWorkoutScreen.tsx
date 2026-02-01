@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../constants/theme';
 import { useWorkoutStore } from '../../stores/workoutStore';
@@ -418,7 +419,7 @@ export const AddWorkoutScreen: React.FC = () => {
           {/* Photo options */}
           <TouchableOpacity style={styles.option} onPress={handleTakePhoto}>
             <View style={styles.optionIcon}>
-              <Text style={styles.iconText}>📸</Text>
+              <Ionicons name="camera" size={28} color={colors.primary} />
             </View>
             <View style={styles.optionContent}>
               <Text style={styles.optionTitle}>Take Photo</Text>
@@ -426,12 +427,12 @@ export const AddWorkoutScreen: React.FC = () => {
                 Snap your erg screen and we'll extract the data
               </Text>
             </View>
-            <Text style={styles.arrow}>→</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.option} onPress={handleChooseFromGallery}>
             <View style={styles.optionIcon}>
-              <Text style={styles.iconText}>🖼️</Text>
+              <Ionicons name="images" size={28} color={colors.primary} />
             </View>
             <View style={styles.optionContent}>
               <Text style={styles.optionTitle}>Choose from Gallery</Text>
@@ -439,12 +440,12 @@ export const AddWorkoutScreen: React.FC = () => {
                 Upload a photo from your camera roll
               </Text>
             </View>
-            <Text style={styles.arrow}>→</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.option} onPress={handleManualEntry}>
             <View style={styles.optionIcon}>
-              <Text style={styles.iconText}>✏️</Text>
+              <Ionicons name="create" size={28} color={colors.primary} />
             </View>
             <View style={styles.optionContent}>
               <Text style={styles.optionTitle}>Manual Entry</Text>
@@ -452,7 +453,7 @@ export const AddWorkoutScreen: React.FC = () => {
                 Type in your workout data yourself
               </Text>
             </View>
-            <Text style={styles.arrow}>→</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
 
           {/* Tips */}

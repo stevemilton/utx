@@ -16,7 +16,10 @@ import { api } from '../../services/api';
 import type { MainTabScreenProps } from '../../navigation/types';
 
 // Format time helper
-const formatTime = (seconds: number): string => {
+const formatTime = (seconds: number | undefined | null): string => {
+  if (seconds === undefined || seconds === null || isNaN(seconds)) {
+    return '0:00.0';
+  }
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
@@ -109,7 +112,7 @@ export const WorkoutsScreen: React.FC = () => {
       <View style={styles.workoutMetrics}>
         <View style={styles.metricItem}>
           <Text style={styles.metricValue}>
-            {item.totalDistanceMetres.toLocaleString()}m
+            {(item.totalDistanceMetres ?? 0).toLocaleString()}m
           </Text>
           <Text style={styles.metricLabel}>Distance</Text>
         </View>

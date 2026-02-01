@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import type { MainTabParamList } from './types';
 import { colors, spacing } from '../constants/theme';
 
@@ -13,30 +14,27 @@ import { ProfileScreen } from '../screens/main/ProfileScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Simple icon components (we'll use SVGs in production)
+// Icon mapping for each tab
+type IconName = keyof typeof Ionicons.glyphMap;
+const iconMap: Record<string, { outline: IconName; filled: IconName }> = {
+  Feed: { outline: 'home-outline', filled: 'home' },
+  Workouts: { outline: 'barbell-outline', filled: 'barbell' },
+  AddWorkout: { outline: 'add-circle-outline', filled: 'add-circle' },
+  Leaderboard: { outline: 'trophy-outline', filled: 'trophy' },
+  Profile: { outline: 'person-outline', filled: 'person' },
+};
+
+// Tab icon component using Ionicons
 const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }) => {
-  const icons: Record<string, string> = {
-    Feed: '📰',
-    Workouts: '📊',
-    AddWorkout: '➕',
-    Leaderboard: '🏆',
-    Profile: '👤',
-  };
+  const icons = iconMap[name];
+  if (!icons) return null;
 
   return (
-    <View style={[styles.iconContainer, focused ? styles.iconContainerFocused : undefined]}>
-      <View style={{ opacity: focused ? 1 : 0.6 }}>
-        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          {/* Placeholder - replace with actual icons */}
-          <View
-            style={[
-              styles.iconPlaceholder,
-              focused ? styles.iconPlaceholderFocused : undefined,
-            ]}
-          />
-        </View>
-      </View>
-    </View>
+    <Ionicons
+      name={focused ? icons.filled : icons.outline}
+      size={24}
+      color={focused ? colors.primary : colors.textTertiary}
+    />
   );
 };
 
@@ -117,20 +115,6 @@ const styles = StyleSheet.create({
   tabBarLabel: {
     fontSize: 10,
     fontWeight: '500',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainerFocused: {},
-  iconPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: colors.textTertiary,
-  },
-  iconPlaceholderFocused: {
-    backgroundColor: colors.primary,
   },
   addButton: {
     position: 'absolute',

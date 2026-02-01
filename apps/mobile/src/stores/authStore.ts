@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface UserProfile {
   id: string;
+  username?: string;
   name: string;
   avatarUrl?: string;
   heightCm: number;
@@ -12,6 +13,7 @@ export interface UserProfile {
   gender: 'male' | 'female' | 'prefer_not_to_say';
   maxHr: number;
   stravaConnected: boolean;
+  isPublic: boolean;
 }
 
 interface AuthState {

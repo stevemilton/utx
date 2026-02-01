@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight } from '../constants/theme';
 import { api } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
@@ -24,10 +25,28 @@ export const SettingsScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
+  const [isProfilePublic, setIsProfilePublic] = useState(user?.isPublic ?? true);
 
   useEffect(() => {
     checkStravaStatus();
   }, []);
+
+  useEffect(() => {
+    if (user?.isPublic !== undefined) {
+      setIsProfilePublic(user.isPublic);
+    }
+  }, [user?.isPublic]);
+
+  const handlePrivacyToggle = async (value: boolean) => {
+    setIsProfilePublic(value);
+    try {
+      await api.updateProfile({ isPublic: value });
+    } catch (error) {
+      console.error('Error updating privacy setting:', error);
+      setIsProfilePublic(!value); // Revert on error
+      Alert.alert('Error', 'Failed to update privacy setting');
+    }
+  };
 
   const checkStravaStatus = async () => {
     try {
@@ -136,7 +155,7 @@ export const SettingsScreen: React.FC = () => {
         </Text>
         {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
       </View>
-      {rightElement || (onPress && <Text style={styles.chevron}>›</Text>)}
+      {rightElement || (onPress && <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />)}
     </TouchableOpacity>
   );
 
@@ -144,7 +163,7 @@ export const SettingsScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.closeButton}>✕</Text>
+          <Ionicons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={{ width: 24 }} />
@@ -159,13 +178,59 @@ export const SettingsScreen: React.FC = () => {
               title="Edit Profile"
               subtitle="Name, weight, height, max HR"
               onPress={() => {
-                // Navigate to edit profile
+                navigation.navigate('EditProfile' as never);
               }}
             />
             <SettingRow
               title="Change Photo"
               onPress={() => {
-                // Open photo picker
+                navigation.navigate('EditProfile' as never);
+              }}
+            />
+          </View>
+        </View>
+
+        {/* Privacy */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Privacy</Text>
+          <View style={styles.sectionContent}>
+            <SettingRow
+              title="Public Profile"
+              subtitle={isProfilePublic ? 'Anyone can find and follow you' : 'Only you can see your profile'}
+              rightElement={
+                <Switch
+                  value={isProfilePublic}
+                  onValueChange={handlePrivacyToggle}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                />
+              }
+            />
+          </View>
+        </View>
+
+        {/* Social */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Social</Text>
+          <View style={styles.sectionContent}>
+            <SettingRow
+              title="Find Athletes"
+              subtitle="Search and follow other rowers"
+              onPress={() => {
+                navigation.navigate('AthleteSearch' as never);
+              }}
+            />
+          </View>
+        </View>
+
+        {/* Club */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Club</Text>
+          <View style={styles.sectionContent}>
+            <SettingRow
+              title="Change Club"
+              subtitle="Find or join a club"
+              onPress={() => {
+                navigation.navigate('ClubSearch' as never);
               }}
             />
           </View>
