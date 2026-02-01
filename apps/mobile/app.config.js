@@ -9,7 +9,7 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+    newArchEnabled: false,
     scheme: 'utx',
     splash: {
       image: './assets/splash-icon.png',
