@@ -4,6 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
+    "releaseCommand": "npx prisma db push --accept-data-loss",
     "startCommand": "npm run start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
