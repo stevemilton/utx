@@ -7,17 +7,10 @@ import dotenv from 'dotenv';
 // Middleware
 import { authenticate, optionalAuth } from './middleware/auth.js';
 
-// Routes
+// Routes - MVP Core
 import { authRoutes } from './routes/auth.js';
-import { userRoutes } from './routes/users.js';
 import { workoutRoutes } from './routes/workouts.js';
 import { feedRoutes } from './routes/feed.js';
-import { clubRoutes } from './routes/clubs.js';
-import { pbRoutes } from './routes/pbs.js';
-import { stravaRoutes } from './routes/strava.js';
-import { leaderboardRoutes } from './routes/leaderboards.js';
-import { coachingRoutes } from './routes/coaching.js';
-import { uploadRoutes } from './routes/uploads.js';
 
 dotenv.config();
 
@@ -62,20 +55,13 @@ server.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
 });
 
-// Register routes
+// Register routes - MVP Core
 server.register(authRoutes, { prefix: '/auth' });
-server.register(userRoutes, { prefix: '/users' });
 server.register(workoutRoutes, { prefix: '/workouts' });
 server.register(feedRoutes, { prefix: '/feed' });
-server.register(clubRoutes, { prefix: '/clubs' });
-server.register(pbRoutes, { prefix: '/pbs' });
-server.register(stravaRoutes, { prefix: '/strava' });
-server.register(leaderboardRoutes, { prefix: '/leaderboards' });
-server.register(coachingRoutes, { prefix: '/coaching' });
-server.register(uploadRoutes, { prefix: '/uploads' });
 
 // Error handler
-server.setErrorHandler((error, request, reply) => {
+server.setErrorHandler((error: Error & { statusCode?: number }, request, reply) => {
   server.log.error(error);
 
   reply.status(error.statusCode || 500).send({

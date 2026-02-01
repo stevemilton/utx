@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { WorkoutType, PbCategory } from '@prisma/client';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -20,14 +21,11 @@ interface CreateWorkoutBody {
   intervals?: object;
   hrData?: object;
   notes?: string;
-  isPublic?: boolean;
   workoutDate?: string;
 }
 
 interface UpdateWorkoutBody {
-  workoutType?: string;
   notes?: string;
-  isPublic?: boolean;
 }
 
 interface GetWorkoutsQuery {
@@ -42,6 +40,49 @@ interface WorkoutParams {
 
 interface OcrBody {
   imageBase64: string;
+}
+
+// Map string workout types to enum
+function mapWorkoutType(type: string): WorkoutType {
+  const mapping: Record<string, WorkoutType> = {
+    '500': 'five_hundred',
+    '1000': 'one_thousand',
+    '2000': 'two_thousand',
+    '5000': 'five_thousand',
+    '6000': 'six_thousand',
+    '10000': 'ten_thousand',
+    'half_marathon': 'half_marathon',
+    'marathon': 'marathon',
+    'one_minute': 'one_minute',
+    'steady_state': 'steady_state',
+    'intervals': 'intervals',
+    'distance': 'custom',
+    'time': 'custom',
+    'custom': 'custom',
+  };
+  return mapping[type] || 'custom';
+}
+
+// Map distance to PB category
+function distanceToPbCategory(distance: number): PbCategory | null {
+  const mapping: Record<number, PbCategory> = {
+    500: 'five_hundred',
+    1000: 'one_thousand',
+    2000: 'two_thousand',
+    5000: 'five_thousand',
+    6000: 'six_thousand',
+    10000: 'ten_thousand',
+    21097: 'half_marathon',
+    42195: 'marathon',
+  };
+
+  // Allow 1% tolerance for distance matching
+  for (const [dist, category] of Object.entries(mapping)) {
+    if (Math.abs(distance - Number(dist)) / Number(dist) < 0.01) {
+      return category;
+    }
+  }
+  return null;
 }
 
 export async function workoutRoutes(server: FastifyInstance): Promise<void> {
@@ -67,7 +108,6 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         const avgHrScore = Math.min(avgHrPercent, 1) * 3;
         effortScore = Math.round(Math.min(durationScore + avgHrScore + 2, 10) * 10) / 10;
       } else {
-        // Estimate from duration only
         effortScore = Math.round(Math.min(data.totalTimeSeconds / 3600, 1) * 3 * 10) / 10;
       }
 
@@ -75,29 +115,27 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         data: {
           userId,
           photoUrl: data.photoUrl,
-          workoutType: data.workoutType,
+          workoutType: mapWorkoutType(data.workoutType),
           totalTimeSeconds: data.totalTimeSeconds,
           totalDistanceMetres: data.totalDistanceMetres,
-          avgSplit: data.avgSplit,
-          avgStrokeRate: data.avgStrokeRate,
-          avgWatts: data.avgWatts,
+          averageSplitSeconds: data.avgSplit,
+          averageRate: data.avgStrokeRate || 0,
+          averageWatts: data.avgWatts,
           avgHeartRate: data.avgHeartRate,
           maxHeartRate: data.maxHeartRate,
           calories: data.calories,
           dragFactor: data.dragFactor,
-          intervals: data.intervals,
-          hrData: data.hrData,
+          intervals: data.intervals as any,
+          hrData: data.hrData as any,
           effortScore,
           notes: data.notes,
-          isPublic: data.isPublic ?? true,
           workoutDate: data.workoutDate ? new Date(data.workoutDate) : new Date(),
         },
         include: {
           user: {
             select: {
               id: true,
-              displayName: true,
-              username: true,
+              name: true,
               avatarUrl: true,
             },
           },
@@ -120,19 +158,11 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.optionalAuth] },
     async (request: FastifyRequest<{ Querystring: GetWorkoutsQuery }>, reply: FastifyReply) => {
       const { limit = 20, cursor, userId } = request.query;
-      const currentUserId = request.user?.id;
 
       const where: any = {};
 
       if (userId) {
         where.userId = userId;
-        // If viewing another user's workouts, only show public ones
-        if (userId !== currentUserId) {
-          where.isPublic = true;
-        }
-      } else {
-        // Public feed - show only public workouts
-        where.isPublic = true;
       }
 
       if (cursor) {
@@ -147,8 +177,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
           user: {
             select: {
               id: true,
-              displayName: true,
-              username: true,
+              name: true,
               avatarUrl: true,
             },
           },
@@ -183,7 +212,6 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.optionalAuth] },
     async (request: FastifyRequest<{ Params: WorkoutParams }>, reply: FastifyReply) => {
       const { workoutId } = request.params;
-      const currentUserId = request.user?.id;
 
       const workout = await server.prisma.workout.findUnique({
         where: { id: workoutId },
@@ -191,8 +219,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
           user: {
             select: {
               id: true,
-              displayName: true,
-              username: true,
+              name: true,
               avatarUrl: true,
             },
           },
@@ -201,7 +228,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
               user: {
                 select: {
                   id: true,
-                  displayName: true,
+                  name: true,
                   avatarUrl: true,
                 },
               },
@@ -212,7 +239,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
               user: {
                 select: {
                   id: true,
-                  displayName: true,
+                  name: true,
                   avatarUrl: true,
                 },
               },
@@ -226,14 +253,6 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         return reply.status(404).send({
           success: false,
           error: 'Workout not found',
-        });
-      }
-
-      // Check visibility
-      if (!workout.isPublic && workout.userId !== currentUserId) {
-        return reply.status(403).send({
-          success: false,
-          error: 'This workout is private',
         });
       }
 
@@ -254,9 +273,8 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     ) => {
       const { workoutId } = request.params;
       const userId = request.user!.id;
-      const updateData = request.body;
+      const { notes } = request.body;
 
-      // Verify ownership
       const existing = await server.prisma.workout.findUnique({
         where: { id: workoutId },
       });
@@ -277,13 +295,12 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
 
       const workout = await server.prisma.workout.update({
         where: { id: workoutId },
-        data: updateData,
+        data: { notes },
         include: {
           user: {
             select: {
               id: true,
-              displayName: true,
-              username: true,
+              name: true,
               avatarUrl: true,
             },
           },
@@ -305,7 +322,6 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       const { workoutId } = request.params;
       const userId = request.user!.id;
 
-      // Verify ownership
       const existing = await server.prisma.workout.findUnique({
         where: { id: workoutId },
       });
@@ -336,18 +352,13 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
   );
 
   // Add reaction to workout
-  server.post<{ Params: WorkoutParams; Body: { type: string } }>(
+  server.post<{ Params: WorkoutParams }>(
     '/:workoutId/reactions',
     { preHandler: [server.authenticate] },
-    async (
-      request: FastifyRequest<{ Params: WorkoutParams; Body: { type: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest<{ Params: WorkoutParams }>, reply: FastifyReply) => {
       const { workoutId } = request.params;
-      const { type } = request.body;
       const userId = request.user!.id;
 
-      // Upsert reaction
       const reaction = await server.prisma.workoutReaction.upsert({
         where: {
           workoutId_userId: {
@@ -355,11 +366,10 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
             userId,
           },
         },
-        update: { type },
+        update: {},
         create: {
           workoutId,
           userId,
-          type,
         },
       });
 
@@ -414,7 +424,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
           user: {
             select: {
               id: true,
-              displayName: true,
+              name: true,
               avatarUrl: true,
             },
           },
@@ -424,6 +434,34 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       return reply.status(201).send({
         success: true,
         data: { comment },
+      });
+    }
+  );
+
+  // Get comments for workout
+  server.get<{ Params: WorkoutParams }>(
+    '/:workoutId/comments',
+    { preHandler: [server.optionalAuth] },
+    async (request: FastifyRequest<{ Params: WorkoutParams }>, reply: FastifyReply) => {
+      const { workoutId } = request.params;
+
+      const comments = await server.prisma.workoutComment.findMany({
+        where: { workoutId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      return reply.send({
+        success: true,
+        data: { comments },
       });
     }
   );
@@ -547,49 +585,50 @@ Only return valid JSON, no other text.`,
 
 // Helper function to update personal bests
 async function updatePersonalBests(server: FastifyInstance, userId: string, workout: any) {
-  const standardDistances = [500, 1000, 2000, 5000, 6000, 10000];
+  const category = distanceToPbCategory(workout.totalDistanceMetres);
 
-  // Check if workout matches a standard distance (within 1%)
-  for (const distance of standardDistances) {
-    if (Math.abs(workout.totalDistanceMetres - distance) / distance < 0.01) {
-      const existing = await server.prisma.personalBest.findUnique({
-        where: {
-          userId_distanceMetres: {
-            userId,
-            distanceMetres: distance,
-          },
+  if (!category) return;
+
+  const existing = await server.prisma.personalBest.findUnique({
+    where: {
+      userId_category: {
+        userId,
+        category,
+      },
+    },
+  });
+
+  const isNewPB = !existing || workout.totalTimeSeconds < (existing.timeSeconds || Infinity);
+
+  if (isNewPB) {
+    await server.prisma.personalBest.upsert({
+      where: {
+        userId_category: {
+          userId,
+          category,
         },
-      });
+      },
+      update: {
+        timeSeconds: workout.totalTimeSeconds,
+        workoutId: workout.id,
+        achievedAt: workout.workoutDate,
+      },
+      create: {
+        userId,
+        category,
+        timeSeconds: workout.totalTimeSeconds,
+        workoutId: workout.id,
+        achievedAt: workout.workoutDate,
+      },
+    });
 
-      if (!existing || workout.totalTimeSeconds < existing.timeSeconds) {
-        await server.prisma.personalBest.upsert({
-          where: {
-            userId_distanceMetres: {
-              userId,
-              distanceMetres: distance,
-            },
-          },
-          update: {
-            timeSeconds: workout.totalTimeSeconds,
-            split: workout.avgSplit,
-            watts: workout.avgWatts,
-            strokeRate: workout.avgStrokeRate,
-            workoutId: workout.id,
-            achievedAt: workout.workoutDate,
-          },
-          create: {
-            userId,
-            distanceMetres: distance,
-            timeSeconds: workout.totalTimeSeconds,
-            split: workout.avgSplit,
-            watts: workout.avgWatts,
-            strokeRate: workout.avgStrokeRate,
-            workoutId: workout.id,
-            achievedAt: workout.workoutDate,
-          },
-        });
-      }
-      break;
-    }
+    // Mark workout as PB
+    await server.prisma.workout.update({
+      where: { id: workout.id },
+      data: {
+        isPb: true,
+        pbCategory: category,
+      },
+    });
   }
 }

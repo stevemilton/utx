@@ -3,8 +3,12 @@ import { getAuth } from 'firebase-admin/auth';
 
 interface RegisterBody {
   firebaseToken: string;
-  email?: string;
-  displayName?: string;
+  name: string;
+  heightCm: number;
+  weightKg: number;
+  birthDate: string;
+  gender: 'male' | 'female' | 'prefer_not_to_say';
+  maxHr: number;
   avatarUrl?: string;
 }
 
@@ -19,7 +23,7 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   server.post<{ Body: RegisterBody }>(
     '/register',
     async (request: FastifyRequest<{ Body: RegisterBody }>, reply: FastifyReply) => {
-      const { firebaseToken, email, displayName, avatarUrl } = request.body;
+      const { firebaseToken, name, heightCm, weightKg, birthDate, gender, maxHr, avatarUrl } = request.body;
 
       try {
         // Verify the Firebase token
@@ -46,8 +50,12 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
         user = await server.prisma.user.create({
           data: {
             firebaseUid,
-            email: email || decodedToken.email,
-            displayName: displayName || decodedToken.name,
+            name: name || decodedToken.name || 'User',
+            heightCm,
+            weightKg,
+            birthDate: new Date(birthDate),
+            gender,
+            maxHr,
             avatarUrl: avatarUrl || decodedToken.picture,
           },
         });

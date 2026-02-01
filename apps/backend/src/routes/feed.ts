@@ -3,9 +3,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 interface FeedQuery {
   limit?: number;
   cursor?: string;
-  type?: 'all' | 'following' | 'club' | 'squad';
-  clubId?: string;
-  squadId?: string;
+  type?: 'all' | 'following' | 'squad';
 }
 
 export async function feedRoutes(server: FastifyInstance): Promise<void> {
@@ -15,7 +13,7 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Querystring: FeedQuery }>, reply: FastifyReply) => {
       const userId = request.user!.id;
-      const { limit = 20, cursor, type = 'all', clubId, squadId } = request.query;
+      const { limit = 20, cursor, type = 'all' } = request.query;
 
       let userIds: string[] = [];
 
@@ -31,45 +29,31 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
           userIds.push(userId);
           break;
 
-        case 'club':
-          if (!clubId) {
-            return reply.status(400).send({
-              success: false,
-              error: 'clubId is required for club feed',
-            });
-          }
-          // Get all members of the club
-          const clubMembers = await server.prisma.clubMembership.findMany({
-            where: { clubId },
-            select: { userId: true },
-          });
-          userIds = clubMembers.map((m) => m.userId);
-          break;
-
         case 'squad':
-          if (!squadId) {
-            return reply.status(400).send({
-              success: false,
-              error: 'squadId is required for squad feed',
-            });
-          }
-          // Get all members of the squad
-          const squadMembers = await server.prisma.squadMembership.findMany({
-            where: { squadId },
-            select: { userId: true },
+          // Get user's squad memberships
+          const squadMemberships = await server.prisma.squadMembership.findMany({
+            where: { userId },
+            select: { squadId: true },
           });
-          userIds = squadMembers.map((m) => m.userId);
+
+          if (squadMemberships.length > 0) {
+            // Get all members of user's squads
+            const squadIds = squadMemberships.map((m) => m.squadId);
+            const squadMembers = await server.prisma.squadMembership.findMany({
+              where: { squadId: { in: squadIds } },
+              select: { userId: true },
+            });
+            userIds = [...new Set(squadMembers.map((m) => m.userId))];
+          }
           break;
 
         case 'all':
         default:
-          // Show all public workouts (global feed)
+          // Show all workouts (global feed)
           break;
       }
 
-      const where: any = {
-        isPublic: true,
-      };
+      const where: any = {};
 
       if (type !== 'all' && userIds.length > 0) {
         where.userId = { in: userIds };
@@ -87,32 +71,19 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
           user: {
             select: {
               id: true,
-              displayName: true,
-              username: true,
+              name: true,
               avatarUrl: true,
-              clubMemberships: {
-                include: {
-                  club: {
-                    select: {
-                      id: true,
-                      name: true,
-                      logoUrl: true,
-                    },
-                  },
-                },
-                take: 1,
-              },
             },
-          },
-          reactions: {
-            where: { userId },
-            select: { type: true },
           },
           _count: {
             select: {
               reactions: true,
               comments: true,
             },
+          },
+          reactions: {
+            where: { userId },
+            select: { id: true },
           },
         },
       });
@@ -122,215 +93,174 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
 
       const nextCursor = hasMore ? workouts[workouts.length - 1]?.id : null;
 
-      // Transform workouts to include user's reaction
-      const transformedWorkouts = workouts.map((w) => ({
-        ...w,
-        userReaction: w.reactions[0]?.type || null,
-        reactions: undefined,
+      // Transform to include hasUserReacted
+      const transformedWorkouts = workouts.map((workout) => ({
+        id: workout.id,
+        userId: workout.userId,
+        userName: workout.user.name,
+        userAvatarUrl: workout.user.avatarUrl,
+        workoutType: workout.workoutType,
+        totalTimeSeconds: workout.totalTimeSeconds,
+        totalDistanceMetres: workout.totalDistanceMetres,
+        averageSplitSeconds: workout.averageSplitSeconds,
+        averageRate: workout.averageRate,
+        avgHeartRate: workout.avgHeartRate,
+        effortScore: workout.effortScore,
+        isPb: workout.isPb,
+        reactionCount: workout._count.reactions,
+        commentCount: workout._count.comments,
+        hasUserReacted: workout.reactions.length > 0,
+        workoutDate: workout.workoutDate,
+        createdAt: workout.createdAt,
       }));
 
       return reply.send({
         success: true,
-        data: {
-          workouts: transformedWorkouts,
-          nextCursor,
-          hasMore,
-        },
+        data: transformedWorkouts,
       });
     }
   );
 
-  // Get workout stats for the current user
+  // Squad feed shortcut
   server.get(
-    '/stats',
+    '/squad',
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = request.user!.id;
 
-      // Get stats for last 7 days, 30 days, and all time
-      const now = new Date();
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const squadMemberships = await server.prisma.squadMembership.findMany({
+        where: { userId },
+        select: { squadId: true },
+      });
 
-      const [last7Days, last30Days, allTime, totalWorkouts] = await Promise.all([
-        server.prisma.workout.aggregate({
-          where: {
-            userId,
-            workoutDate: { gte: sevenDaysAgo },
+      if (squadMemberships.length === 0) {
+        return reply.send({
+          success: true,
+          data: [],
+        });
+      }
+
+      const squadIds = squadMemberships.map((m) => m.squadId);
+      const squadMembers = await server.prisma.squadMembership.findMany({
+        where: { squadId: { in: squadIds } },
+        select: { userId: true },
+      });
+      const userIds = [...new Set(squadMembers.map((m) => m.userId))];
+
+      const workouts = await server.prisma.workout.findMany({
+        where: { userId: { in: userIds } },
+        take: 20,
+        orderBy: { workoutDate: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
           },
-          _sum: {
-            totalDistanceMetres: true,
-            totalTimeSeconds: true,
-            calories: true,
+          _count: {
+            select: {
+              reactions: true,
+              comments: true,
+            },
           },
-          _count: true,
-          _avg: {
-            effortScore: true,
+          reactions: {
+            where: { userId },
+            select: { id: true },
           },
-        }),
-        server.prisma.workout.aggregate({
-          where: {
-            userId,
-            workoutDate: { gte: thirtyDaysAgo },
-          },
-          _sum: {
-            totalDistanceMetres: true,
-            totalTimeSeconds: true,
-            calories: true,
-          },
-          _count: true,
-          _avg: {
-            effortScore: true,
-          },
-        }),
-        server.prisma.workout.aggregate({
-          where: { userId },
-          _sum: {
-            totalDistanceMetres: true,
-            totalTimeSeconds: true,
-            calories: true,
-          },
-          _avg: {
-            effortScore: true,
-          },
-        }),
-        server.prisma.workout.count({
-          where: { userId },
-        }),
-      ]);
+        },
+      });
+
+      const transformedWorkouts = workouts.map((workout) => ({
+        id: workout.id,
+        userId: workout.userId,
+        userName: workout.user.name,
+        userAvatarUrl: workout.user.avatarUrl,
+        workoutType: workout.workoutType,
+        totalTimeSeconds: workout.totalTimeSeconds,
+        totalDistanceMetres: workout.totalDistanceMetres,
+        averageSplitSeconds: workout.averageSplitSeconds,
+        averageRate: workout.averageRate,
+        avgHeartRate: workout.avgHeartRate,
+        effortScore: workout.effortScore,
+        isPb: workout.isPb,
+        reactionCount: workout._count.reactions,
+        commentCount: workout._count.comments,
+        hasUserReacted: workout.reactions.length > 0,
+        workoutDate: workout.workoutDate,
+        createdAt: workout.createdAt,
+      }));
 
       return reply.send({
         success: true,
-        data: {
-          last7Days: {
-            workoutCount: last7Days._count,
-            totalMetres: last7Days._sum.totalDistanceMetres || 0,
-            totalSeconds: last7Days._sum.totalTimeSeconds || 0,
-            totalCalories: last7Days._sum.calories || 0,
-            avgEffortScore: last7Days._avg.effortScore || 0,
-          },
-          last30Days: {
-            workoutCount: last30Days._count,
-            totalMetres: last30Days._sum.totalDistanceMetres || 0,
-            totalSeconds: last30Days._sum.totalTimeSeconds || 0,
-            totalCalories: last30Days._sum.calories || 0,
-            avgEffortScore: last30Days._avg.effortScore || 0,
-          },
-          allTime: {
-            workoutCount: totalWorkouts,
-            totalMetres: allTime._sum.totalDistanceMetres || 0,
-            totalSeconds: allTime._sum.totalTimeSeconds || 0,
-            totalCalories: allTime._sum.calories || 0,
-            avgEffortScore: allTime._avg.effortScore || 0,
-          },
-        },
+        data: transformedWorkouts,
       });
     }
   );
 
-  // Get recent activity (reactions, comments, follows)
+  // Following feed shortcut
   server.get(
-    '/activity',
+    '/following',
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = request.user!.id;
 
-      // Get recent reactions on user's workouts
-      const recentReactions = await server.prisma.workoutReaction.findMany({
-        where: {
-          workout: { userId },
-          userId: { not: userId }, // Exclude own reactions
-        },
+      const following = await server.prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true },
+      });
+      const userIds = following.map((f) => f.followingId);
+      userIds.push(userId);
+
+      const workouts = await server.prisma.workout.findMany({
+        where: { userId: { in: userIds } },
+        take: 20,
+        orderBy: { workoutDate: 'desc' },
         include: {
           user: {
             select: {
               id: true,
-              displayName: true,
+              name: true,
               avatarUrl: true,
             },
           },
-          workout: {
+          _count: {
             select: {
-              id: true,
-              workoutType: true,
-              totalDistanceMetres: true,
+              reactions: true,
+              comments: true,
             },
           },
+          reactions: {
+            where: { userId },
+            select: { id: true },
+          },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
       });
 
-      // Get recent comments on user's workouts
-      const recentComments = await server.prisma.workoutComment.findMany({
-        where: {
-          workout: { userId },
-          userId: { not: userId }, // Exclude own comments
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-          workout: {
-            select: {
-              id: true,
-              workoutType: true,
-              totalDistanceMetres: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      });
-
-      // Get recent new followers
-      const recentFollowers = await server.prisma.follow.findMany({
-        where: { followingId: userId },
-        include: {
-          follower: {
-            select: {
-              id: true,
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      });
-
-      // Combine and sort by date
-      const activity = [
-        ...recentReactions.map((r) => ({
-          type: 'reaction' as const,
-          user: r.user,
-          workout: r.workout,
-          reactionType: r.type,
-          createdAt: r.createdAt,
-        })),
-        ...recentComments.map((c) => ({
-          type: 'comment' as const,
-          user: c.user,
-          workout: c.workout,
-          content: c.content,
-          createdAt: c.createdAt,
-        })),
-        ...recentFollowers.map((f) => ({
-          type: 'follow' as const,
-          user: f.follower,
-          createdAt: f.createdAt,
-        })),
-      ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const transformedWorkouts = workouts.map((workout) => ({
+        id: workout.id,
+        userId: workout.userId,
+        userName: workout.user.name,
+        userAvatarUrl: workout.user.avatarUrl,
+        workoutType: workout.workoutType,
+        totalTimeSeconds: workout.totalTimeSeconds,
+        totalDistanceMetres: workout.totalDistanceMetres,
+        averageSplitSeconds: workout.averageSplitSeconds,
+        averageRate: workout.averageRate,
+        avgHeartRate: workout.avgHeartRate,
+        effortScore: workout.effortScore,
+        isPb: workout.isPb,
+        reactionCount: workout._count.reactions,
+        commentCount: workout._count.comments,
+        hasUserReacted: workout.reactions.length > 0,
+        workoutDate: workout.workoutDate,
+        createdAt: workout.createdAt,
+      }));
 
       return reply.send({
         success: true,
-        data: {
-          activity: activity.slice(0, 20),
-        },
+        data: transformedWorkouts,
       });
     }
   );
