@@ -21,9 +21,14 @@ export const colors = {
 
   // Status colors
   success: '#22C55E',
+  successLight: 'rgba(34, 197, 94, 0.15)',
   warning: '#EAB308',
   error: '#EF4444',
   info: '#3B82F6',
+
+  // Base colors
+  white: '#FFFFFF',
+  black: '#000000',
 
   // HR Zone colors
   zone1: '#94A3B8', // Recovery - gray

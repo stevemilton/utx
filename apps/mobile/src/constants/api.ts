@@ -7,9 +7,9 @@ export const API_CONFIG = {
     baseUrl: 'http://localhost:3000',
     timeout: 30000,
   },
-  // Production - update with your Railway URL
+  // Production - Railway
   production: {
-    baseUrl: 'https://utx-api.up.railway.app',
+    baseUrl: 'https://utx-production.up.railway.app',
     timeout: 30000,
   },
 };

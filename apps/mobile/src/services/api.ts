@@ -121,6 +121,18 @@ class ApiService {
     });
   }
 
+  async getUserProfile(userId: string) {
+    return this.request(ENDPOINTS.users.profile(userId));
+  }
+
+  async getUserFollowers(userId: string) {
+    return this.request(ENDPOINTS.social.followers(userId));
+  }
+
+  async getUserFollowing(userId: string) {
+    return this.request(ENDPOINTS.social.following(userId));
+  }
+
   async uploadAvatar(imageUri: string) {
     const token = useAuthStore.getState().token;
     const formData = new FormData();
@@ -267,10 +279,45 @@ class ApiService {
     });
   }
 
+  async getClub(clubId: string) {
+    return this.request(ENDPOINTS.clubs.get(clubId));
+  }
+
+  async getMyClubs() {
+    return this.request(ENDPOINTS.clubs.list);
+  }
+
+  async leaveClub(clubId: string) {
+    return this.request(ENDPOINTS.clubs.leave(clubId), {
+      method: 'POST',
+    });
+  }
+
   // Squad endpoints
+  async getSquad(squadId: string) {
+    return this.request(ENDPOINTS.squads.get(squadId));
+  }
+
+  async getClubSquads(clubId: string) {
+    return this.request(ENDPOINTS.squads.list(clubId));
+  }
+
   async joinSquad(squadId: string) {
     return this.request(ENDPOINTS.squads.join(squadId), {
       method: 'POST',
+    });
+  }
+
+  async leaveSquad(squadId: string) {
+    return this.request(ENDPOINTS.squads.leave(squadId), {
+      method: 'POST',
+    });
+  }
+
+  async createSquad(clubId: string, data: { name: string }) {
+    return this.request(ENDPOINTS.squads.create(clubId), {
+      method: 'POST',
+      body: data,
     });
   }
 
