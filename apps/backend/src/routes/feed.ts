@@ -12,7 +12,7 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
     '/',
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Querystring: FeedQuery }>, reply: FastifyReply) => {
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
       const { limit = 20, cursor, type = 'all' } = request.query;
 
       let userIds: string[] = [];
@@ -126,7 +126,7 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
     '/squad',
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
 
       const squadMemberships = await server.prisma.squadMembership.findMany({
         where: { userId },
@@ -204,7 +204,7 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
     '/following',
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
 
       const following = await server.prisma.follow.findMany({
         where: { followerId: userId },

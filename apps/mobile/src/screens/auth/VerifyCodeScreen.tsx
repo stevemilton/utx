@@ -58,10 +58,11 @@ export const VerifyCodeScreen: React.FC = () => {
       // Verify the code with Firebase (verificationId is stored in the service)
       const result = await firebaseAuth.verifyPhoneCode(verificationCode);
 
-      if (result.success && result.user && result.token) {
+      if (result.success && result.token) {
         // Register/login with our backend
         const response = await api.register({
           firebaseToken: result.token,
+          provider: 'apple', // Phone auth would need its own provider type
           name: '',
           heightCm: 0,
           weightKg: 0,
@@ -71,10 +72,10 @@ export const VerifyCodeScreen: React.FC = () => {
         });
 
         if (response.success && response.data) {
-          const { user } = response.data as any;
+          const { user, token: backendToken } = response.data as any;
 
-          // Store auth state
-          login(user, result.token);
+          // Store auth state - use the backend's token
+          login(user, backendToken || result.token);
 
           // If existing user with completed profile, skip onboarding
           if (!result.isNewUser && user.hasCompletedOnboarding) {

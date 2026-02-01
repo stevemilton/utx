@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
+import jwt from '@fastify/jwt';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 
@@ -45,6 +46,11 @@ server.register(multipart, {
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB max file size
   },
+});
+
+// Register JWT plugin
+server.register(jwt, {
+  secret: process.env.JWT_SECRET || 'utx-development-secret-change-in-production',
 });
 
 // Decorate with prisma
@@ -116,3 +122,6 @@ declare module 'fastify' {
     optionalAuth: typeof optionalAuth;
   }
 }
+
+// Note: @fastify/jwt types are handled in middleware/auth.ts
+// We use our own AuthenticatedUser type for request.user

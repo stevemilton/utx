@@ -87,7 +87,9 @@ class ApiService {
   // Auth endpoints
   async register(userData: {
     firebaseToken: string;
+    provider?: 'apple' | 'google';
     name: string;
+    email?: string;
     heightCm: number;
     weightKg: number;
     birthDate: string;

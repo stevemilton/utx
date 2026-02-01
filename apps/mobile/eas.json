@@ -36,7 +36,8 @@
     "production": {
       "ios": {
         "appleId": "greasylaketwitter@gmail.com",
-        "appleTeamId": "6FK49H335R"
+        "appleTeamId": "6FK49H335R",
+        "ascAppId": "6758580968"
       }
     }
   }

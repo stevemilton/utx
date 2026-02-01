@@ -93,7 +93,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     '/',
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Body: CreateWorkoutBody }>, reply: FastifyReply) => {
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
       const data = request.body;
 
       // Get user for effort score calculation and AI coaching
@@ -288,7 +288,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       reply: FastifyReply
     ) => {
       const { workoutId } = request.params;
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
       const { notes } = request.body;
 
       const existing = await server.prisma.workout.findUnique({
@@ -336,7 +336,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Params: WorkoutParams }>, reply: FastifyReply) => {
       const { workoutId } = request.params;
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
 
       const existing = await server.prisma.workout.findUnique({
         where: { id: workoutId },
@@ -373,7 +373,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Params: WorkoutParams }>, reply: FastifyReply) => {
       const { workoutId } = request.params;
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
 
       const reaction = await server.prisma.workoutReaction.upsert({
         where: {
@@ -402,7 +402,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Params: WorkoutParams }>, reply: FastifyReply) => {
       const { workoutId } = request.params;
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
 
       await server.prisma.workoutReaction.deleteMany({
         where: {
@@ -428,7 +428,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     ) => {
       const { workoutId } = request.params;
       const { content } = request.body;
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
 
       const comment = await server.prisma.workoutComment.create({
         data: {
@@ -491,7 +491,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       reply: FastifyReply
     ) => {
       const { commentId } = request.params;
-      const userId = request.user!.id;
+      const userId = request.authUser!.id;
 
       const comment = await server.prisma.workoutComment.findUnique({
         where: { id: commentId },

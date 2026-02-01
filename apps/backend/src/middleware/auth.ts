@@ -13,7 +13,7 @@ if (getApps().length === 0) {
   });
 }
 
-const auth = getAuth();
+const firebaseAuth = getAuth();
 
 export interface AuthenticatedUser {
   id: string;
@@ -22,7 +22,7 @@ export interface AuthenticatedUser {
 
 declare module 'fastify' {
   interface FastifyRequest {
-    user?: AuthenticatedUser;
+    authUser?: AuthenticatedUser;
   }
 }
 
@@ -43,7 +43,28 @@ export async function authenticate(
   const token = authHeader.substring(7);
 
   try {
-    const decodedToken = await auth.verifyIdToken(token);
+    // First, try to verify as our JWT token (from new auth flow)
+    try {
+      const decoded = await request.server.jwt.verify(token);
+      const jwtPayload = decoded as { userId: string; provider: string };
+
+      if (jwtPayload.userId) {
+        const user = await request.server.prisma.user.findUnique({
+          where: { id: jwtPayload.userId },
+          select: { id: true, firebaseUid: true },
+        });
+
+        if (user) {
+          request.authUser = user;
+          return;
+        }
+      }
+    } catch {
+      // Not a valid JWT, try Firebase token below
+    }
+
+    // Fallback: try Firebase token verification (legacy)
+    const decodedToken = await firebaseAuth.verifyIdToken(token);
 
     // Get user from database
     const user = await request.server.prisma.user.findUnique({
@@ -59,7 +80,7 @@ export async function authenticate(
       return;
     }
 
-    request.user = user;
+    request.authUser = user;
   } catch (error) {
     request.log.error(error, 'Token verification failed');
     reply.status(401).send({
@@ -82,7 +103,28 @@ export async function optionalAuth(
   const token = authHeader.substring(7);
 
   try {
-    const decodedToken = await auth.verifyIdToken(token);
+    // First, try to verify as our JWT token
+    try {
+      const decoded = await request.server.jwt.verify(token);
+      const jwtPayload = decoded as { userId: string; provider: string };
+
+      if (jwtPayload.userId) {
+        const user = await request.server.prisma.user.findUnique({
+          where: { id: jwtPayload.userId },
+          select: { id: true, firebaseUid: true },
+        });
+
+        if (user) {
+          request.authUser = user;
+          return;
+        }
+      }
+    } catch {
+      // Not a valid JWT, try Firebase token below
+    }
+
+    // Fallback: try Firebase token verification (legacy)
+    const decodedToken = await firebaseAuth.verifyIdToken(token);
 
     const user = await request.server.prisma.user.findUnique({
       where: { firebaseUid: decodedToken.uid },
@@ -90,7 +132,7 @@ export async function optionalAuth(
     });
 
     if (user) {
-      request.user = user;
+      request.authUser = user;
     }
   } catch {
     // Ignore errors for optional auth

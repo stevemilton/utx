@@ -43,18 +43,14 @@ export const AuthScreen: React.FC = () => {
 
   const handleGoogleToken = async (idToken: string) => {
     try {
-      const result = await firebaseAuth.signInWithGoogle(idToken);
-
-      if (result.success && result.user && result.token) {
-        await handleAuthSuccess(
-          result.token,
-          result.isNewUser ?? false,
-          result.user.displayName ?? undefined,
-          result.user.email ?? undefined
-        );
-      } else if (result.error) {
-        Alert.alert('Error', result.error);
-      }
+      // Send the Google token directly to our backend
+      await handleAuthSuccess(
+        idToken,
+        'google',
+        true, // isNewUser - backend will determine
+        undefined,
+        undefined
+      );
     } catch (error) {
       Alert.alert('Error', 'Google Sign In failed. Please try again.');
       console.error('Google Sign In error:', error);
@@ -64,16 +60,19 @@ export const AuthScreen: React.FC = () => {
   };
 
   const handleAuthSuccess = async (
-    firebaseToken: string,
+    token: string,
+    provider: 'apple' | 'google',
     isNewUser: boolean,
     displayName?: string,
     email?: string
   ) => {
     try {
-      // Register/login with our backend
+      // Register/login with our backend - send the provider token directly
       const response = await api.register({
-        firebaseToken,
+        firebaseToken: token, // This is actually the Apple/Google token now
+        provider,
         name: displayName || '',
+        email: email || '',
         heightCm: 0, // Will be set in onboarding
         weightKg: 0,
         birthDate: '',
@@ -82,10 +81,10 @@ export const AuthScreen: React.FC = () => {
       });
 
       if (response.success && response.data) {
-        const { user } = response.data as any;
+        const { user, token: backendToken } = response.data as any;
 
-        // Store auth state
-        login(user, firebaseToken);
+        // Store auth state - use the backend's token
+        login(user, backendToken || token);
 
         // If existing user with completed profile, skip onboarding
         if (!isNewUser && user.hasCompletedOnboarding) {
@@ -107,12 +106,13 @@ export const AuthScreen: React.FC = () => {
 
       const result = await firebaseAuth.signInWithApple();
 
-      if (result.success && result.user && result.token) {
+      if (result.success && result.token) {
         await handleAuthSuccess(
           result.token,
-          result.isNewUser ?? false,
-          result.user.displayName ?? undefined,
-          result.user.email ?? undefined
+          'apple',
+          result.isNewUser ?? true,
+          result.displayName,
+          result.email
         );
       } else if (result.error && result.error !== 'Sign in cancelled') {
         Alert.alert('Error', result.error);
@@ -132,9 +132,7 @@ export const AuthScreen: React.FC = () => {
     promptAsync();
   };
 
-  const handlePhoneSignIn = () => {
-    navigation.navigate('PhoneAuth');
-  };
+  // Phone auth is disabled in Expo managed workflow - see CLAUDE.md
 
   return (
     <SafeAreaView style={styles.container}>
@@ -192,15 +190,20 @@ export const AuthScreen: React.FC = () => {
             )}
           </TouchableOpacity>
 
-          {/* Phone Sign In */}
+          {/* Phone Sign In - Disabled in Expo managed workflow */}
           <TouchableOpacity
-            style={[styles.socialButton, styles.phoneButton]}
-            onPress={handlePhoneSignIn}
+            style={[styles.socialButton, styles.phoneButton, styles.disabledButton]}
+            onPress={() => Alert.alert(
+              'Phone Auth Unavailable',
+              'Phone authentication is not available. Please use Apple or Google sign-in instead.'
+            )}
           >
             <View style={styles.socialIconPlaceholder}>
               <Text style={styles.socialIconText}>📱</Text>
             </View>
-            <Text style={styles.socialButtonText}>Continue with Phone</Text>
+            <Text style={[styles.socialButtonText, styles.disabledButtonText]}>
+              Continue with Phone
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -275,6 +278,12 @@ const styles = StyleSheet.create({
   phoneButton: {
     backgroundColor: colors.backgroundTertiary,
     borderColor: colors.border,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledButtonText: {
+    color: colors.textTertiary,
   },
   socialIconPlaceholder: {
     width: 24,
