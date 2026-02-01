@@ -653,7 +653,7 @@ async function updatePersonalBests(server: FastifyInstance, userId: string, work
 async function generateCoachingInsightForWorkout(
   server: FastifyInstance,
   workout: any,
-  user: { maxHr: number; heightCm: number; weightKg: number; birthDate: Date; gender: string }
+  user: { maxHr: number; heightCm: number; weightKg: number; birthDate: Date | null; gender: string | null }
 ) {
   try {
     // Get user's recent workout history
@@ -679,10 +679,10 @@ async function generateCoachingInsightForWorkout(
       },
     });
 
-    // Calculate age
-    const age = Math.floor(
-      (Date.now() - new Date(user.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-    );
+    // Calculate age (default to 30 if birthDate not set)
+    const age = user.birthDate
+      ? Math.floor((Date.now() - new Date(user.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : 30;
 
     const insight = await generateCoachingInsight(
       {
@@ -701,7 +701,7 @@ async function generateCoachingInsightForWorkout(
         heightCm: user.heightCm,
         weightKg: user.weightKg,
         age,
-        gender: user.gender,
+        gender: user.gender || 'prefer_not_to_say',
         maxHr: user.maxHr,
       },
       {
