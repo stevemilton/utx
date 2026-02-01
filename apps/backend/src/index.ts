@@ -11,6 +11,10 @@ import { authenticate, optionalAuth } from './middleware/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { workoutRoutes } from './routes/workouts.js';
 import { feedRoutes } from './routes/feed.js';
+import { pbsRoutes } from './routes/pbs.js';
+import { clubsRoutes } from './routes/clubs.js';
+import { leaderboardsRoutes } from './routes/leaderboards.js';
+import { stravaRoutes } from './routes/strava.js';
 
 dotenv.config();
 
@@ -59,6 +63,10 @@ server.get('/health', async () => {
 server.register(authRoutes, { prefix: '/auth' });
 server.register(workoutRoutes, { prefix: '/workouts' });
 server.register(feedRoutes, { prefix: '/feed' });
+server.register(pbsRoutes, { prefix: '/pbs' });
+server.register(clubsRoutes, { prefix: '/clubs' });
+server.register(leaderboardsRoutes, { prefix: '/leaderboards' });
+server.register(stravaRoutes, { prefix: '/strava' });
 
 // Error handler
 server.setErrorHandler((error: Error & { statusCode?: number }, request, reply) => {

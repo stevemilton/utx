@@ -1,6 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { WorkoutType, PbCategory } from '@prisma/client';
 import OpenAI from 'openai';
+import { calculateEffortScore } from '../utils/effortScore.js';
+import { generateCoachingInsight } from '../utils/aiCoaching.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -94,22 +96,29 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       const userId = request.user!.id;
       const data = request.body;
 
-      // Get user for effort score calculation
+      // Get user for effort score calculation and AI coaching
       const user = await server.prisma.user.findUnique({
         where: { id: userId },
-        select: { maxHr: true },
+        select: { maxHr: true, heightCm: true, weightKg: true, birthDate: true, gender: true },
       });
 
-      // Calculate effort score
-      let effortScore = 0;
-      if (user?.maxHr && data.avgHeartRate) {
-        const avgHrPercent = data.avgHeartRate / user.maxHr;
-        const durationScore = Math.min(data.totalTimeSeconds / 3600, 1) * 2;
-        const avgHrScore = Math.min(avgHrPercent, 1) * 3;
-        effortScore = Math.round(Math.min(durationScore + avgHrScore + 2, 10) * 10) / 10;
-      } else {
-        effortScore = Math.round(Math.min(data.totalTimeSeconds / 3600, 1) * 3 * 10) / 10;
-      }
+      // Calculate effort score using the utility
+      const effortScore = user?.maxHr
+        ? calculateEffortScore({
+            avgHeartRate: data.avgHeartRate,
+            maxHeartRate: data.maxHeartRate,
+            userMaxHr: user.maxHr,
+            totalTimeSeconds: data.totalTimeSeconds,
+            workoutType: mapWorkoutType(data.workoutType),
+            hrData: data.hrData,
+          })
+        : calculateEffortScore({
+            avgHeartRate: null,
+            maxHeartRate: null,
+            userMaxHr: 180,
+            totalTimeSeconds: data.totalTimeSeconds,
+            workoutType: mapWorkoutType(data.workoutType),
+          });
 
       const workout = await server.prisma.workout.create({
         data: {
@@ -144,6 +153,13 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
 
       // Check and update personal bests
       await updatePersonalBests(server, userId, workout);
+
+      // Generate AI coaching insight asynchronously (don't wait for it)
+      if (user) {
+        generateCoachingInsightForWorkout(server, workout, user).catch(err => {
+          server.log.error(err, 'Failed to generate AI coaching insight');
+        });
+      }
 
       return reply.status(201).send({
         success: true,
@@ -630,5 +646,77 @@ async function updatePersonalBests(server: FastifyInstance, userId: string, work
         pbCategory: category,
       },
     });
+  }
+}
+
+// Generate AI coaching insight and save to workout
+async function generateCoachingInsightForWorkout(
+  server: FastifyInstance,
+  workout: any,
+  user: { maxHr: number; heightCm: number; weightKg: number; birthDate: Date; gender: string }
+) {
+  try {
+    // Get user's recent workout history
+    const recentWorkouts = await server.prisma.workout.findMany({
+      where: { userId: workout.userId },
+      select: {
+        workoutType: true,
+        totalDistanceMetres: true,
+        averageSplitSeconds: true,
+        effortScore: true,
+        workoutDate: true,
+      },
+      orderBy: { workoutDate: 'desc' },
+      take: 20,
+    });
+
+    // Get user's PBs
+    const pbs = await server.prisma.personalBest.findMany({
+      where: { userId: workout.userId },
+      select: {
+        category: true,
+        timeSeconds: true,
+      },
+    });
+
+    // Calculate age
+    const age = Math.floor(
+      (Date.now() - new Date(user.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+    );
+
+    const insight = await generateCoachingInsight(
+      {
+        workoutType: workout.workoutType,
+        totalTimeSeconds: workout.totalTimeSeconds,
+        totalDistanceMetres: workout.totalDistanceMetres,
+        averageSplitSeconds: workout.averageSplitSeconds,
+        averageRate: workout.averageRate,
+        averageWatts: workout.averageWatts,
+        avgHeartRate: workout.avgHeartRate,
+        maxHeartRate: workout.maxHeartRate,
+        effortScore: workout.effortScore,
+        intervals: workout.intervals,
+      },
+      {
+        heightCm: user.heightCm,
+        weightKg: user.weightKg,
+        age,
+        gender: user.gender,
+        maxHr: user.maxHr,
+      },
+      {
+        recentWorkouts: recentWorkouts.filter(w => w.workoutDate < workout.workoutDate),
+        pbs: pbs.map(pb => ({ category: pb.category, timeSeconds: pb.timeSeconds })),
+      }
+    );
+
+    if (insight) {
+      await server.prisma.workout.update({
+        where: { id: workout.id },
+        data: { aiInsight: insight },
+      });
+    }
+  } catch (error) {
+    server.log.error(error, 'Failed to generate AI coaching insight');
   }
 }
