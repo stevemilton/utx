@@ -66,7 +66,8 @@ export const WorkoutsScreen: React.FC = () => {
       const response = await api.getWorkouts();
 
       if (response.success && response.data) {
-        setMyWorkouts(response.data as Workout[]);
+        const data = response.data as { workouts: Workout[] };
+        setMyWorkouts(data.workouts || []);
       }
     } catch (error) {
       console.error('Workouts load error:', error);
