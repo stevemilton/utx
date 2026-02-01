@@ -4,20 +4,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import { useOnboardingStore } from '../../stores/onboardingStore';
 import type { OnboardingScreenProps } from '../../navigation/types';
 
 export const HRSetupScreen: React.FC = () => {
   const navigation = useNavigation<OnboardingScreenProps<'HRSetup'>['navigation']>();
+  const { setMaxHr, data: onboardingData } = useOnboardingStore();
   const [knowsMaxHR, setKnowsMaxHR] = useState<boolean | null>(null);
   const [maxHR, setMaxHR] = useState('');
 
-  // Estimated max HR (would come from birth date in actual implementation)
-  const estimatedMaxHR = 190; // 220 - age
+  // Calculate estimated max HR from birth date
+  const calculateEstimatedMaxHR = () => {
+    if (onboardingData.birthDate) {
+      const birthDate = new Date(onboardingData.birthDate);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      return Math.max(150, 220 - age);
+    }
+    return 190; // Default fallback
+  };
+
+  const estimatedMaxHR = calculateEstimatedMaxHR();
 
   const handleContinue = () => {
-    // TODO: Save max HR to store
     const finalMaxHR = knowsMaxHR && maxHR ? parseInt(maxHR) : estimatedMaxHR;
-    console.log('Max HR:', finalMaxHR);
+    // Save to onboarding store
+    setMaxHr(finalMaxHR);
     navigation.navigate('StravaConnect');
   };
 

@@ -5,10 +5,12 @@ import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import { useOnboardingStore } from '../../stores/onboardingStore';
 import type { OnboardingScreenProps } from '../../navigation/types';
 
 export const ProfileIdentityScreen: React.FC = () => {
   const navigation = useNavigation<OnboardingScreenProps<'ProfileIdentity'>['navigation']>();
+  const { setIdentity } = useOnboardingStore();
   const [displayName, setDisplayName] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +34,8 @@ export const ProfileIdentityScreen: React.FC = () => {
       return;
     }
 
-    // Store in temporary state and continue
-    // TODO: Save to store
+    // Save to onboarding store
+    setIdentity(displayName.trim(), avatarUri);
     navigation.navigate('ProfilePhysical');
   };
 

@@ -529,6 +529,23 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     async (request: FastifyRequest<{ Body: OcrBody }>, reply: FastifyReply) => {
       const { imageBase64 } = request.body;
 
+      // Check if OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY) {
+        request.log.error('OPENAI_API_KEY not configured');
+        return reply.status(500).send({
+          success: false,
+          error: 'OCR service not configured',
+        });
+      }
+
+      // Validate base64 image
+      if (!imageBase64 || imageBase64.length < 100) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid image data',
+        });
+      }
+
       try {
         const response = await openai.chat.completions.create({
           model: 'gpt-4o',
@@ -588,11 +605,22 @@ Only return valid JSON, no other text.`,
           success: true,
           data: { ocrData },
         });
-      } catch (error) {
+      } catch (error: any) {
         request.log.error(error, 'OCR processing failed');
+
+        // Provide more specific error messages
+        let errorMessage = 'Failed to process image';
+        if (error?.code === 'invalid_api_key') {
+          errorMessage = 'OCR service authentication failed';
+        } else if (error?.code === 'rate_limit_exceeded') {
+          errorMessage = 'OCR service rate limit reached. Please try again later';
+        } else if (error?.message?.includes('Could not parse')) {
+          errorMessage = 'Could not read the erg screen. Please ensure the screen is clearly visible';
+        }
+
         return reply.status(500).send({
           success: false,
-          error: 'Failed to process image',
+          error: errorMessage,
         });
       }
     }

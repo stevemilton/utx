@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import { useOnboardingStore } from '../../stores/onboardingStore';
 import type { OnboardingScreenProps } from '../../navigation/types';
 
 type Gender = 'male' | 'female' | 'prefer_not_to_say';
@@ -20,6 +21,7 @@ type WeightUnit = 'kg' | 'lbs';
 
 export const ProfilePhysicalScreen: React.FC = () => {
   const navigation = useNavigation<OnboardingScreenProps<'ProfilePhysical'>['navigation']>();
+  const { setPhysicalStats } = useOnboardingStore();
 
   const [height, setHeight] = useState('');
   const [heightUnit, setHeightUnit] = useState<HeightUnit>('cm');
@@ -55,8 +57,13 @@ export const ProfilePhysicalScreen: React.FC = () => {
     const heightCm = heightUnit === 'cm' ? heightNum : heightNum * 30.48; // rough ft to cm
     const weightKg = weightUnit === 'kg' ? weightNum : weightNum * 0.453592;
 
-    // TODO: Save to store
-    console.log({ heightCm, weightKg, birthDate: birthDate.toISOString(), gender });
+    // Save to onboarding store
+    setPhysicalStats({
+      heightCm: Math.round(heightCm),
+      weightKg: Math.round(weightKg * 10) / 10,
+      birthDate: birthDate.toISOString(),
+      gender,
+    });
 
     navigation.navigate('HRSetup');
   };
@@ -179,6 +186,7 @@ export const ProfilePhysicalScreen: React.FC = () => {
               value={birthDate}
               mode="date"
               display="spinner"
+              themeVariant="dark"
               onChange={(event, date) => {
                 setShowDatePicker(false);
                 if (date) setBirthDate(date);

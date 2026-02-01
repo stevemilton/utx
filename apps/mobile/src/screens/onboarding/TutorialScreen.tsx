@@ -7,11 +7,14 @@ import {
   FlatList,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useAuthStore } from '../../stores/authStore';
+import { useOnboardingStore } from '../../stores/onboardingStore';
+import { api } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -47,8 +50,10 @@ const slides: TutorialSlide[] = [
 ];
 
 export const TutorialScreen: React.FC = () => {
-  const { setOnboardingComplete } = useAuthStore();
+  const { setOnboardingComplete, updateProfile } = useAuthStore();
+  const { data: onboardingData, reset: resetOnboarding } = useOnboardingStore();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -56,9 +61,61 @@ export const TutorialScreen: React.FC = () => {
     setCurrentIndex(index);
   };
 
-  const handleGetStarted = () => {
-    // Complete onboarding and navigate to main app
-    setOnboardingComplete(true);
+  const handleGetStarted = async () => {
+    setIsSaving(true);
+
+    try {
+      // Build profile update payload
+      const profileUpdates: Record<string, unknown> = {};
+
+      if (onboardingData.displayName) {
+        profileUpdates.name = onboardingData.displayName;
+      }
+      if (onboardingData.heightCm > 0) {
+        profileUpdates.heightCm = onboardingData.heightCm;
+      }
+      if (onboardingData.weightKg > 0) {
+        profileUpdates.weightKg = onboardingData.weightKg;
+      }
+      if (onboardingData.birthDate) {
+        profileUpdates.birthDate = onboardingData.birthDate;
+      }
+      if (onboardingData.gender) {
+        profileUpdates.gender = onboardingData.gender;
+      }
+      if (onboardingData.maxHr > 0) {
+        profileUpdates.maxHr = onboardingData.maxHr;
+      }
+      profileUpdates.hasCompletedOnboarding = true;
+
+      // Save to backend
+      const response = await api.updateProfile(profileUpdates);
+
+      if (response.success) {
+        // Update local auth store with the profile data
+        updateProfile({
+          name: onboardingData.displayName || undefined,
+          heightCm: onboardingData.heightCm || undefined,
+          weightKg: onboardingData.weightKg || undefined,
+          birthDate: onboardingData.birthDate || undefined,
+          gender: onboardingData.gender || undefined,
+          maxHr: onboardingData.maxHr || undefined,
+        });
+
+        // Clear onboarding store
+        resetOnboarding();
+
+        // Complete onboarding and navigate to main app
+        setOnboardingComplete(true);
+      } else {
+        Alert.alert('Error', 'Failed to save profile. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to save onboarding data:', error);
+      Alert.alert('Error', 'Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleNext = () => {
@@ -124,6 +181,8 @@ export const TutorialScreen: React.FC = () => {
           variant="primary"
           size="lg"
           fullWidth
+          loading={isSaving}
+          disabled={isSaving}
         />
         {currentIndex < slides.length - 1 && (
           <Button
@@ -132,6 +191,7 @@ export const TutorialScreen: React.FC = () => {
             variant="ghost"
             size="md"
             fullWidth
+            disabled={isSaving}
           />
         )}
       </View>

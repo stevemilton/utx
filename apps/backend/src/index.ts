@@ -10,6 +10,7 @@ import { authenticate, optionalAuth } from './middleware/auth.js';
 
 // Routes - MVP Core
 import { authRoutes } from './routes/auth.js';
+import { usersRoutes } from './routes/users.js';
 import { workoutRoutes } from './routes/workouts.js';
 import { feedRoutes } from './routes/feed.js';
 import { pbsRoutes } from './routes/pbs.js';
@@ -67,6 +68,7 @@ server.get('/health', async () => {
 
 // Register routes - MVP Core
 server.register(authRoutes, { prefix: '/auth' });
+server.register(usersRoutes, { prefix: '/users' });
 server.register(workoutRoutes, { prefix: '/workouts' });
 server.register(feedRoutes, { prefix: '/feed' });
 server.register(pbsRoutes, { prefix: '/pbs' });
