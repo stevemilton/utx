@@ -45,8 +45,10 @@ export async function authenticate(
   try {
     // First, try to verify as our JWT token (from new auth flow)
     try {
+      request.log.info('Attempting JWT verification...');
       const decoded = await request.server.jwt.verify(token);
       const jwtPayload = decoded as { userId: string; provider: string };
+      request.log.info({ jwtPayload }, 'JWT decoded successfully');
 
       if (jwtPayload.userId) {
         const user = await request.server.prisma.user.findUnique({
@@ -55,12 +57,16 @@ export async function authenticate(
         });
 
         if (user) {
+          request.log.info({ userId: user.id }, 'User found, auth successful');
           request.authUser = user;
           return;
+        } else {
+          request.log.warn({ userId: jwtPayload.userId }, 'User not found in database');
         }
       }
-    } catch {
+    } catch (jwtError: any) {
       // Not a valid JWT, try Firebase token below
+      request.log.info({ error: jwtError?.message }, 'JWT verification failed, trying Firebase...');
     }
 
     // Fallback: try Firebase token verification (legacy)
