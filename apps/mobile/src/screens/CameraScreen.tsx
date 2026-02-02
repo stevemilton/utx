@@ -71,24 +71,35 @@ export const CameraScreen: React.FC = () => {
     setIsProcessing(true);
 
     try {
+      console.log('[OCR] Starting image processing...');
+      console.log('[OCR] Photo URI:', capturedPhoto);
+
       // Read the file as base64
       const base64 = await FileSystem.readAsStringAsync(capturedPhoto, {
         encoding: 'base64',
       });
 
+      console.log('[OCR] Base64 length:', base64.length);
+      console.log('[OCR] Sending to OCR endpoint...');
+
       // Send to OCR endpoint
       const ocrResponse = await api.processOcr(base64);
 
+      console.log('[OCR] Response received:', JSON.stringify(ocrResponse, null, 2));
+
       if (ocrResponse.success && ocrResponse.data) {
+        console.log('[OCR] Success! Navigating to AddWorkout...');
         // Navigate to add workout screen with OCR data pre-filled
         navigation.replace('AddWorkout', {
           ocrData: ocrResponse.data.ocrData,
           photoUri: capturedPhoto,
         });
       } else {
+        const errorMsg = ocrResponse.error || 'Unknown error';
+        console.error('[OCR] Failed with error:', errorMsg);
         Alert.alert(
           'OCR Failed',
-          'Could not read the erg screen. Would you like to enter the data manually?',
+          `${errorMsg}\n\nWould you like to enter the data manually?`,
           [
             {
               text: 'Try Again',
@@ -105,10 +116,13 @@ export const CameraScreen: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error('OCR processing failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[OCR] Exception caught:', errorMessage);
+      console.error('[OCR] Full error:', error);
+
       Alert.alert(
         'Processing Error',
-        'Failed to process the image. Would you like to try again or enter data manually?',
+        `${errorMessage}\n\nWould you like to try again or enter data manually?`,
         [
           {
             text: 'Try Again',

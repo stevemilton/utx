@@ -12,6 +12,7 @@ interface RequestOptions {
   body?: unknown;
   headers?: Record<string, string>;
   skipAuth?: boolean;
+  timeout?: number; // Custom timeout for specific requests
 }
 
 class ApiService {
@@ -28,7 +29,7 @@ class ApiService {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
-    const { method = 'GET', body, headers = {}, skipAuth = false } = options;
+    const { method = 'GET', body, headers = {}, skipAuth = false, timeout } = options;
 
     const token = useAuthStore.getState().token;
 
@@ -42,7 +43,8 @@ class ApiService {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const requestTimeout = timeout || this.timeout;
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -197,9 +199,11 @@ class ApiService {
   }
 
   async processOcr(imageBase64: string) {
+    const config = getApiConfig();
     return this.request<{ ocrData: Record<string, unknown> }>(ENDPOINTS.workouts.ocr, {
       method: 'POST',
       body: { imageBase64 },
+      timeout: config.ocrTimeout, // Use longer timeout for OCR
     });
   }
 
