@@ -96,9 +96,9 @@ export const JoinClubScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.progress}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: '83%' }]} />
+          <View style={[styles.progressFill, { width: '80%' }]} />
         </View>
-        <Text style={styles.progressText}>5 of 6</Text>
+        <Text style={styles.progressText}>4 of 5</Text>
       </View>
 
       <View style={styles.content}>

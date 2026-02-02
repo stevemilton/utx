@@ -15,7 +15,6 @@ export type OnboardingStackParamList = {
   ProfileIdentity: undefined;
   ProfilePhysical: undefined;
   HRSetup: undefined;
-  StravaConnect: undefined;
   JoinClub: undefined;
   Tutorial: undefined;
 };
@@ -66,7 +65,6 @@ export type RootStackParamList = {
   UserProfile: { userId: string };
   ClubDetail: { clubId: string };
   SquadDetail: { squadId: string };
-  Settings: undefined;
   EditProfile: undefined;
   PBHistory: { category: string };
   ClubSearch: undefined;

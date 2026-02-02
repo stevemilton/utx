@@ -14,7 +14,6 @@ import { WorkoutEditScreen } from '../screens/WorkoutEditScreen';
 import { CameraScreen } from '../screens/CameraScreen';
 import { CommentsScreen } from '../screens/CommentsScreen';
 import { UserProfileScreen } from '../screens/UserProfileScreen';
-import { SettingsScreen } from '../screens/SettingsScreen';
 import { ClubDetailScreen } from '../screens/ClubDetailScreen';
 import { SquadDetailScreen } from '../screens/SquadDetailScreen';
 import { ClubSearchScreen } from '../screens/ClubSearchScreen';
@@ -61,7 +60,6 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen name="Camera" component={CameraScreen} />
             <Stack.Screen name="Comments" component={CommentsScreen} />
             <Stack.Screen name="UserProfile" component={UserProfileScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="ClubDetail" component={ClubDetailScreen} />
             <Stack.Screen name="SquadDetail" component={SquadDetailScreen} />
             <Stack.Screen name="ClubSearch" component={ClubSearchScreen} />
