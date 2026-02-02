@@ -30,16 +30,16 @@ export const HRSetupScreen: React.FC = () => {
     const finalMaxHR = knowsMaxHR && maxHR ? parseInt(maxHR) : estimatedMaxHR;
     // Save to onboarding store
     setMaxHr(finalMaxHR);
-    navigation.navigate('StravaConnect');
+    navigation.navigate('JoinClub');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.progress}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: '50%' }]} />
+          <View style={[styles.progressFill, { width: '60%' }]} />
         </View>
-        <Text style={styles.progressText}>3 of 6</Text>
+        <Text style={styles.progressText}>3 of 5</Text>
       </View>
 
       <View style={styles.content}>

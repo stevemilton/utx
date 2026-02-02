@@ -149,7 +149,7 @@ export const TutorialScreen: React.FC = () => {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: '100%' }]} />
         </View>
-        <Text style={styles.progressText}>6 of 6</Text>
+        <Text style={styles.progressText}>5 of 5</Text>
       </View>
 
       <View style={styles.content}>
