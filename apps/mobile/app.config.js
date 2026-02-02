@@ -14,7 +14,7 @@ module.exports = {
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#000000',
+      backgroundColor: '#FFFFFF',
     },
     ios: {
       supportsTablet: false,
@@ -31,7 +31,7 @@ module.exports = {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#000000',
+        backgroundColor: '#FFFFFF',
       },
       package: 'com.utx.app',
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
@@ -39,7 +39,7 @@ module.exports = {
     },
     web: {
       bundler: 'metro',
-      output: 'static',
+      output: 'single',
       favicon: './assets/favicon.png',
     },
     plugins: [

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Button, Input } from '../../components';
@@ -35,109 +35,122 @@ export const HRSetupScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.progress}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: '60%' }]} />
-        </View>
-        <Text style={styles.progressText}>3 of 5</Text>
-      </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.progress}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: '60%' }]} />
+            </View>
+            <Text style={styles.progressText}>3 of 5</Text>
+          </View>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Heart rate setup</Text>
-        <Text style={styles.subtitle}>
-          Knowing your max heart rate helps us calculate accurate HR zones and
-          effort scores
-        </Text>
+          <View style={styles.content}>
+            <Text style={styles.title}>Heart rate setup</Text>
+            <Text style={styles.subtitle}>
+              Knowing your max heart rate helps us calculate accurate HR zones and
+              effort scores
+            </Text>
 
-        <Text style={styles.question}>Do you know your maximum heart rate?</Text>
+            <Text style={styles.question}>Do you know your maximum heart rate?</Text>
 
-        {/* Options */}
-        <View style={styles.options}>
-          <TouchableOpacity
-            style={[styles.optionButton, knowsMaxHR === true && styles.optionButtonActive]}
-            onPress={() => setKnowsMaxHR(true)}
-          >
-            <View style={styles.optionContent}>
-              <Text
-                style={[
-                  styles.optionText,
-                  knowsMaxHR === true && styles.optionTextActive,
-                ]}
+            {/* Options */}
+            <View style={styles.options}>
+              <TouchableOpacity
+                style={[styles.optionButton, knowsMaxHR === true && styles.optionButtonActive]}
+                onPress={() => setKnowsMaxHR(true)}
               >
-                Yes, I know it
-              </Text>
-              <Text style={styles.optionHint}>Enter your tested max HR</Text>
-            </View>
-            <View
-              style={[styles.radio, knowsMaxHR === true && styles.radioActive]}
-            >
-              {knowsMaxHR === true && <View style={styles.radioInner} />}
-            </View>
-          </TouchableOpacity>
+                <View style={styles.optionContent}>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      knowsMaxHR === true && styles.optionTextActive,
+                    ]}
+                  >
+                    Yes, I know it
+                  </Text>
+                  <Text style={styles.optionHint}>Enter your tested max HR</Text>
+                </View>
+                <View
+                  style={[styles.radio, knowsMaxHR === true && styles.radioActive]}
+                >
+                  {knowsMaxHR === true && <View style={styles.radioInner} />}
+                </View>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.optionButton, knowsMaxHR === false && styles.optionButtonActive]}
-            onPress={() => setKnowsMaxHR(false)}
-          >
-            <View style={styles.optionContent}>
-              <Text
-                style={[
-                  styles.optionText,
-                  knowsMaxHR === false && styles.optionTextActive,
-                ]}
+              <TouchableOpacity
+                style={[styles.optionButton, knowsMaxHR === false && styles.optionButtonActive]}
+                onPress={() => setKnowsMaxHR(false)}
               >
-                No / Not sure
-              </Text>
-              <Text style={styles.optionHint}>
-                We'll estimate from your age and refine as you train
-              </Text>
+                <View style={styles.optionContent}>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      knowsMaxHR === false && styles.optionTextActive,
+                    ]}
+                  >
+                    No / Not sure
+                  </Text>
+                  <Text style={styles.optionHint}>
+                    We'll estimate from your age and refine as you train
+                  </Text>
+                </View>
+                <View
+                  style={[styles.radio, knowsMaxHR === false && styles.radioActive]}
+                >
+                  {knowsMaxHR === false && <View style={styles.radioInner} />}
+                </View>
+              </TouchableOpacity>
             </View>
-            <View
-              style={[styles.radio, knowsMaxHR === false && styles.radioActive]}
-            >
-              {knowsMaxHR === false && <View style={styles.radioInner} />}
-            </View>
-          </TouchableOpacity>
-        </View>
 
-        {/* Max HR input (if known) */}
-        {knowsMaxHR === true && (
-          <View style={styles.hrInput}>
-            <Input
-              label="Maximum Heart Rate"
-              placeholder="e.g., 195"
-              value={maxHR}
-              onChangeText={setMaxHR}
-              keyboardType="numeric"
-              helper="bpm"
+            {/* Max HR input (if known) */}
+            {knowsMaxHR === true && (
+              <View style={styles.hrInput}>
+                <Input
+                  label="Maximum Heart Rate"
+                  placeholder="e.g., 195"
+                  value={maxHR}
+                  onChangeText={setMaxHR}
+                  keyboardType="numeric"
+                  helper="bpm"
+                />
+              </View>
+            )}
+
+            {/* Estimation info (if not known) */}
+            {knowsMaxHR === false && (
+              <View style={styles.estimateInfo}>
+                <Text style={styles.estimateTitle}>Estimated Max HR</Text>
+                <Text style={styles.estimateValue}>{estimatedMaxHR} bpm</Text>
+                <Text style={styles.estimateNote}>
+                  Based on your age. This will automatically adjust if we see higher
+                  readings during your workouts.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Button
+              title="Continue"
+              onPress={handleContinue}
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={knowsMaxHR === null}
             />
           </View>
-        )}
-
-        {/* Estimation info (if not known) */}
-        {knowsMaxHR === false && (
-          <View style={styles.estimateInfo}>
-            <Text style={styles.estimateTitle}>Estimated Max HR</Text>
-            <Text style={styles.estimateValue}>{estimatedMaxHR} bpm</Text>
-            <Text style={styles.estimateNote}>
-              Based on your age. This will automatically adjust if we see higher
-              readings during your workouts.
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Actions */}
-      <View style={styles.actions}>
-        <Button
-          title="Continue"
-          onPress={handleContinue}
-          variant="primary"
-          size="lg"
-          fullWidth
-          disabled={knowsMaxHR === null}
-        />
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -146,6 +159,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: spacing.lg,
   },
   progress: {
@@ -205,7 +227,7 @@ const styles = StyleSheet.create({
   },
   optionButtonActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryDark + '10',
+    backgroundColor: colors.primarySubtle,
   },
   optionContent: {
     flex: 1,

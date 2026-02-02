@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../constants/theme';
 import { useWorkoutStore, Workout } from '../../stores/workoutStore';
 import { api } from '../../services/api';
@@ -25,23 +26,33 @@ const formatTime = (seconds: number | undefined | null): string => {
   return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
 };
 
-// Get workout type display name
-const getWorkoutTypeName = (type: string): string => {
+// Get workout type display name - complete mapping
+const getWorkoutTypeName = (type: string | null | undefined): string => {
+  if (!type) return 'Workout';
   const typeNames: Record<string, string> = {
+    // Backend Prisma enum values
+    'five_hundred': '500m',
+    'one_thousand': '1K',
+    'two_thousand': '2K Test',
+    'five_thousand': '5K',
+    'six_thousand': '6K',
+    'ten_thousand': '10K',
+    'half_marathon': 'Half Marathon',
+    'marathon': 'Marathon',
+    'one_minute': '1 Min Test',
+    'steady_state': 'Steady State',
+    'intervals': 'Intervals',
+    'custom': 'Workout',
+    // Legacy format values
     '500m': '500m',
     '1000m': '1K',
     '2000m': '2K Test',
     '5000m': '5K',
     '6000m': '6K',
     '10000m': '10K',
-    half_marathon: 'Half Marathon',
-    marathon: 'Marathon',
-    '1_minute': '1 Minute',
-    steady_state: 'Steady State',
-    intervals: 'Intervals',
-    custom: 'Custom',
+    '1_minute': '1 Min Test',
   };
-  return typeNames[type] || type;
+  return typeNames[type] || type.replace(/_/g, ' ');
 };
 
 // Format date
@@ -103,6 +114,7 @@ export const WorkoutsScreen: React.FC = () => {
           </Text>
           {item.isPb && (
             <View style={styles.pbBadge}>
+              <Ionicons name="trophy" size={10} color={colors.black} />
               <Text style={styles.pbText}>PB</Text>
             </View>
           )}
@@ -139,7 +151,9 @@ export const WorkoutsScreen: React.FC = () => {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>📊</Text>
+      <View style={styles.emptyIconContainer}>
+        <Ionicons name="barbell-outline" size={48} color={colors.textTertiary} />
+      </View>
       <Text style={styles.emptyTitle}>No workouts yet</Text>
       <Text style={styles.emptyText}>
         Tap the + button to log your first workout
@@ -210,11 +224,12 @@ export const WorkoutsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: fontSize.xxxl,
@@ -228,6 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
+    ...shadows.sm,
   },
   statItem: {
     flex: 1,
@@ -271,6 +287,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   pbBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: colors.pbGold,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
@@ -279,7 +298,7 @@ const styles = StyleSheet.create({
   pbText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
-    color: colors.textInverse,
+    color: colors.black,
   },
   workoutDate: {
     fontSize: fontSize.sm,
@@ -313,8 +332,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: spacing.xxl * 2,
   },
-  emptyIcon: {
-    fontSize: 64,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.lg,
   },
   emptyTitle: {

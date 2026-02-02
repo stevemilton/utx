@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../constants/theme';
 import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../services/api';
 import type { MainTabScreenProps } from '../../navigation/types';
@@ -234,21 +235,25 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const SettingRow: React.FC<{
-    icon?: string;
+    iconName?: keyof typeof Ionicons.glyphMap;
     title: string;
     subtitle?: string;
     onPress?: () => void;
     rightElement?: React.ReactNode;
     danger?: boolean;
-  }> = ({ icon, title, subtitle, onPress, rightElement, danger }) => (
+  }> = ({ iconName, title, subtitle, onPress, rightElement, danger }) => (
     <TouchableOpacity
       style={styles.settingRow}
       onPress={onPress}
       disabled={!onPress}
     >
-      {icon && (
-        <View style={styles.settingIcon}>
-          <Text style={styles.settingIconText}>{icon}</Text>
+      {iconName && (
+        <View style={[styles.settingIcon, danger && styles.settingIconDanger]}>
+          <Ionicons
+            name={iconName}
+            size={18}
+            color={danger ? colors.error : colors.primary}
+          />
         </View>
       )}
       <View style={styles.settingContent}>
@@ -257,7 +262,9 @@ export const ProfileScreen: React.FC = () => {
         </Text>
         {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
       </View>
-      {rightElement || (onPress && <Text style={styles.chevron}>›</Text>)}
+      {rightElement || (onPress && (
+        <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+      ))}
     </TouchableOpacity>
   );
 
@@ -284,6 +291,12 @@ export const ProfileScreen: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={() => navigation.navigate('AthleteSearch' as never)}
+          >
+            <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
         </View>
 
         {/* Profile card */}
@@ -300,7 +313,10 @@ export const ProfileScreen: React.FC = () => {
             )}
             <View style={styles.profileInfo}>
               <Text style={styles.userName}>{user?.name || 'Unknown'}</Text>
-              <Text style={styles.editText}>Edit profile →</Text>
+              <View style={styles.editTextRow}>
+                <Text style={styles.editText}>Edit profile</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              </View>
             </View>
           </TouchableOpacity>
 
@@ -372,7 +388,9 @@ export const ProfileScreen: React.FC = () => {
               style={styles.emptyClubCard}
               onPress={() => setShowClubModal(true)}
             >
-              <Text style={styles.emptyClubIcon}>🏠</Text>
+              <View style={styles.emptyClubIconContainer}>
+                <Ionicons name="people-outline" size={32} color={colors.textTertiary} />
+              </View>
               <Text style={styles.emptyClubText}>Join a club</Text>
               <Text style={styles.emptyClubSubtext}>
                 Connect with your rowing club for squad workouts and leaderboards
@@ -386,7 +404,7 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Connections</Text>
           <View style={styles.sectionContent}>
             <SettingRow
-              icon="🏃"
+              iconName="fitness-outline"
               title="Strava"
               subtitle={stravaConnected ? 'Connected' : 'Connect to sync workouts'}
               onPress={handleConnectStrava}
@@ -420,7 +438,7 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Notifications</Text>
           <View style={styles.sectionContent}>
             <SettingRow
-              icon="🔔"
+              iconName="notifications-outline"
               title="Push Notifications"
               subtitle="Reactions, comments, club activity"
               rightElement={
@@ -432,7 +450,7 @@ export const ProfileScreen: React.FC = () => {
               }
             />
             <SettingRow
-              icon="📧"
+              iconName="mail-outline"
               title="Email Notifications"
               subtitle="Weekly summary, PB alerts"
               rightElement={
@@ -451,22 +469,22 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Support</Text>
           <View style={styles.sectionContent}>
             <SettingRow
-              icon="❓"
+              iconName="help-circle-outline"
               title="Help & FAQ"
               onPress={() => Linking.openURL('https://utx.app/help')}
             />
             <SettingRow
-              icon="💬"
+              iconName="chatbubble-outline"
               title="Contact Support"
               onPress={() => Linking.openURL('mailto:support@utx.app')}
             />
             <SettingRow
-              icon="🔒"
+              iconName="lock-closed-outline"
               title="Privacy Policy"
               onPress={() => Linking.openURL('https://utx.app/privacy')}
             />
             <SettingRow
-              icon="📄"
+              iconName="document-text-outline"
               title="Terms of Service"
               onPress={() => Linking.openURL('https://utx.app/terms')}
             />
@@ -477,9 +495,9 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.sectionContent}>
-            <SettingRow icon="🚪" title="Log Out" onPress={handleLogout} />
+            <SettingRow iconName="log-out-outline" title="Log Out" onPress={handleLogout} />
             <SettingRow
-              icon="⚠️"
+              iconName="warning-outline"
               title="Delete Account"
               danger
               onPress={handleDeleteAccount}
@@ -559,7 +577,7 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -567,11 +585,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   profileCard: {
     marginHorizontal: spacing.lg,
@@ -579,6 +606,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
+    ...shadows.md,
   },
   profileContent: {
     flexDirection: 'row',
@@ -608,10 +636,15 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
+  editTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
   editText: {
     fontSize: fontSize.sm,
     color: colors.primary,
-    marginTop: spacing.xs,
+    marginRight: 2,
   },
   profileStats: {
     flexDirection: 'row',
@@ -662,6 +695,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
+    ...shadows.sm,
   },
   pbGrid: {
     flexDirection: 'row',
@@ -675,6 +709,7 @@ const styles = StyleSheet.create({
     minWidth: '30%',
     flex: 1,
     alignItems: 'center',
+    ...shadows.sm,
   },
   pbLabel: {
     fontSize: fontSize.sm,
@@ -691,6 +726,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
+    ...shadows.sm,
   },
   clubItem: {
     flexDirection: 'row',
@@ -743,9 +779,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderStyle: 'dashed',
   },
-  emptyClubIcon: {
-    fontSize: 32,
-    marginBottom: spacing.sm,
+  emptyClubIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   emptyClubText: {
     fontSize: fontSize.md,
@@ -771,13 +812,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: colors.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  settingIconText: {
-    fontSize: 16,
+  settingIconDanger: {
+    backgroundColor: colors.errorLight,
   },
   settingContent: {
     flex: 1,
@@ -793,10 +834,6 @@ const styles = StyleSheet.create({
   },
   dangerText: {
     color: colors.error,
-  },
-  chevron: {
-    fontSize: 24,
-    color: colors.textTertiary,
   },
   connectionStatus: {
     backgroundColor: colors.background,

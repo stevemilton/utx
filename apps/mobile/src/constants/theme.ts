@@ -1,52 +1,62 @@
-// UTx Design System
+// UTx Design System v4 - Light Mode Premium Design
+// Inspired by Whoop/Strava aesthetic
 
 export const colors = {
-  // Primary colors
-  primary: '#FF6B35', // Orange - energetic, rowing oar inspired
-  primaryLight: '#FF8F66',
-  primaryDark: '#E55A2B',
+  // Primary colors - Petrol Blue
+  primary: '#0D4F4F',
+  primaryLight: '#1A6B6B',
+  primaryDark: '#083838',
+  primarySubtle: 'rgba(13, 79, 79, 0.08)',
 
-  // Neutral colors
-  background: '#000000',
-  backgroundSecondary: '#111111',
-  backgroundTertiary: '#1A1A1A',
-  surface: '#222222',
-  surfaceLight: '#333333',
+  // Light mode backgrounds
+  background: '#FFFFFF',
+  backgroundSecondary: '#F8F9FA',
+  backgroundTertiary: '#F0F2F4',
+  surface: '#FFFFFF',
+  surfaceHover: '#F5F5F5',
+  surfaceLight: '#FAFAFA',
 
-  // Text colors
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A0A0A0',
-  textTertiary: '#666666',
-  textInverse: '#000000',
+  // Text colors - dark on light
+  textPrimary: '#1A1A1A',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
+  textInverse: '#FFFFFF',
 
   // Status colors
-  success: '#22C55E',
-  successLight: 'rgba(34, 197, 94, 0.15)',
-  warning: '#EAB308',
+  success: '#10B981',
+  successLight: 'rgba(16, 185, 129, 0.1)',
+  warning: '#F59E0B',
+  warningLight: 'rgba(245, 158, 11, 0.1)',
   error: '#EF4444',
+  errorLight: 'rgba(239, 68, 68, 0.1)',
   info: '#3B82F6',
+  infoLight: 'rgba(59, 130, 246, 0.1)',
 
   // Base colors
   white: '#FFFFFF',
   black: '#000000',
 
-  // HR Zone colors
+  // HR Zone colors (keep vibrant for data viz)
   zone1: '#94A3B8', // Recovery - gray
-  zone2: '#22C55E', // Easy Aerobic - green
-  zone3: '#EAB308', // Aerobic - yellow
+  zone2: '#10B981', // Easy Aerobic - green
+  zone3: '#F59E0B', // Aerobic - amber
   zone4: '#F97316', // Threshold - orange
   zone5: '#EF4444', // Max - red
 
   // Effort score colors
-  effortLow: '#22C55E', // 1-4
-  effortMedium: '#EAB308', // 5-7
-  effortHigh: '#EF4444', // 8-10
+  effortLow: '#10B981', // 1-4 green
+  effortMedium: '#F59E0B', // 5-7 amber
+  effortHigh: '#EF4444', // 8-10 red
+
+  // Borders - light mode
+  border: 'rgba(0, 0, 0, 0.06)',
+  borderLight: 'rgba(0, 0, 0, 0.04)',
+  borderStrong: 'rgba(0, 0, 0, 0.12)',
 
   // Other
-  border: '#333333',
-  borderLight: '#444444',
-  overlay: 'rgba(0, 0, 0, 0.7)',
-  pbGold: '#FFD700',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  pbGold: '#D4A418',
+  strava: '#FC4C02',
 };
 
 export const spacing = {
@@ -76,36 +86,39 @@ export const fontSize = {
   xxl: 24,
   xxxl: 32,
   display: 48,
+  hero: 56, // For large split times
 };
 
 export const fontWeight = {
+  light: '300' as const, // For hero numbers
   regular: '400' as const,
   medium: '500' as const,
   semibold: '600' as const,
   bold: '700' as const,
 };
 
+// Light mode shadows (subtle)
 export const shadows = {
   sm: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   md: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   lg: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
 };
 

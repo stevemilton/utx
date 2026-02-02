@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize } from '../constants/theme';
 import { Button } from '../components/Button';
 import { api } from '../services/api';
@@ -179,11 +180,11 @@ export const CameraScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.closeButton}>✕</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Review Photo</Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.previewContainer}>
@@ -227,12 +228,12 @@ export const CameraScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.closeButton}>✕</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Capture Erg Screen</Text>
-        <TouchableOpacity onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}>
-          <Text style={styles.flipButton}>⟲</Text>
+        <TouchableOpacity onPress={() => setFacing(facing === 'back' ? 'front' : 'back')} style={styles.headerButton}>
+          <Ionicons name="camera-reverse-outline" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -252,7 +253,7 @@ export const CameraScreen: React.FC = () => {
 
       <View style={styles.controls}>
         <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-          <Text style={styles.galleryIcon}>🖼</Text>
+          <Ionicons name="images-outline" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
@@ -277,17 +278,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  closeButton: {
-    fontSize: 24,
-    color: colors.textPrimary,
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: fontSize.lg,
     fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  flipButton: {
-    fontSize: 24,
     color: colors.textPrimary,
   },
   cameraContainer: {
@@ -304,7 +303,7 @@ const styles = StyleSheet.create({
   },
   guideFrame: {
     width: '80%',
-    aspectRatio: 16 / 9,
+    aspectRatio: 1, // Square for Concept2 PM5 screen
     position: 'relative',
   },
   corner: {
@@ -354,12 +353,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundTertiary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  galleryIcon: {
-    fontSize: 24,
   },
   captureButton: {
     width: 70,
@@ -414,7 +410,7 @@ const styles = StyleSheet.create({
   // Preview styles
   previewContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   preview: {
     flex: 1,

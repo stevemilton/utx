@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight } from '../../constants/theme';
 import { firebaseAuth } from '../../services/firebase';
@@ -52,7 +53,8 @@ export const PhoneAuthScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Back</Text>
+        <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
+        <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
       <View style={styles.content}>

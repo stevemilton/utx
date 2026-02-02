@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useAuthStore } from '../../stores/authStore';
@@ -138,7 +139,8 @@ export const AuthScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Back</Text>
+        <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
+        <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
       <View style={styles.content}>
@@ -199,7 +201,7 @@ export const AuthScreen: React.FC = () => {
             )}
           >
             <View style={styles.socialIconPlaceholder}>
-              <Text style={styles.socialIconText}>📱</Text>
+              <Ionicons name="phone-portrait-outline" size={18} color={colors.textTertiary} />
             </View>
             <Text style={[styles.socialButtonText, styles.disabledButtonText]}>
               Continue with Phone

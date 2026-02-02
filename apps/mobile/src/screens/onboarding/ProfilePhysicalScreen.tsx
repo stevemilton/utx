@@ -186,7 +186,7 @@ export const ProfilePhysicalScreen: React.FC = () => {
               value={birthDate}
               mode="date"
               display="spinner"
-              themeVariant="dark"
+              themeVariant="light"
               onChange={(event, date) => {
                 setShowDatePicker(false);
                 if (date) setBirthDate(date);
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   genderButtonActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryDark + '20',
+    backgroundColor: colors.primarySubtle,
   },
   genderText: {
     fontSize: fontSize.sm,

@@ -82,7 +82,7 @@ const errorStyles = StyleSheet.create({
     marginBottom: 24,
   },
   button: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#0D4F4F', // Petrol blue
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../constants/theme';
 import { api } from '../../services/api';
 import type { MainTabScreenProps } from '../../navigation/types';
 
@@ -87,9 +88,14 @@ export const LeaderboardScreen: React.FC = () => {
       {/* Rank */}
       <View style={styles.rankContainer}>
         {item.rank <= 3 ? (
-          <Text style={styles.rankMedal}>
-            {item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : '🥉'}
-          </Text>
+          <View style={[
+            styles.medalContainer,
+            item.rank === 1 && styles.medalGold,
+            item.rank === 2 && styles.medalSilver,
+            item.rank === 3 && styles.medalBronze,
+          ]}>
+            <Ionicons name="medal" size={18} color={colors.white} />
+          </View>
         ) : (
           <Text style={styles.rank}>{item.rank}</Text>
         )}
@@ -121,7 +127,9 @@ export const LeaderboardScreen: React.FC = () => {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🏆</Text>
+      <View style={styles.emptyIconContainer}>
+        <Ionicons name="trophy-outline" size={48} color={colors.textTertiary} />
+      </View>
       <Text style={styles.emptyTitle}>No data yet</Text>
       <Text style={styles.emptyText}>
         {scope === 'club'
@@ -210,11 +218,12 @@ export const LeaderboardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: fontSize.xxxl,
@@ -224,24 +233,29 @@ const styles = StyleSheet.create({
   filters: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
+    backgroundColor: colors.background,
   },
   filterButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 100,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
   },
   filterButtonActive: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
   filterTextActive: {
-    color: colors.textPrimary,
+    color: colors.textInverse,
   },
   metricFilters: {
     flexDirection: 'row',
@@ -259,7 +273,7 @@ const styles = StyleSheet.create({
   },
   metricButtonActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.primarySubtle,
   },
   metricText: {
     fontSize: fontSize.sm,
@@ -281,11 +295,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
+    ...shadows.sm,
   },
   entryCurrentUser: {
     borderWidth: 1,
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
+    backgroundColor: colors.primarySubtle,
   },
   rankContainer: {
     width: 40,
@@ -296,8 +311,21 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textSecondary,
   },
-  rankMedal: {
-    fontSize: 24,
+  medalContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medalGold: {
+    backgroundColor: '#FFD700',
+  },
+  medalSilver: {
+    backgroundColor: '#C0C0C0',
+  },
+  medalBronze: {
+    backgroundColor: '#CD7F32',
   },
   userInfo: {
     flex: 1,
@@ -343,8 +371,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.xxl * 2,
   },
-  emptyIcon: {
-    fontSize: 64,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.lg,
   },
   emptyTitle: {

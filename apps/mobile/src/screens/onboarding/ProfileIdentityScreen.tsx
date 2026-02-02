@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useOnboardingStore } from '../../stores/onboardingStore';
@@ -64,7 +65,7 @@ export const ProfileIdentityScreen: React.FC = () => {
             <Image source={{ uri: avatarUri }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>📷</Text>
+              <Ionicons name="camera-outline" size={32} color={colors.textTertiary} />
               <Text style={styles.avatarHint}>Add photo</Text>
             </View>
           )}
@@ -159,10 +160,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 32,
-    marginBottom: spacing.xs,
   },
   avatarHint: {
     fontSize: fontSize.sm,

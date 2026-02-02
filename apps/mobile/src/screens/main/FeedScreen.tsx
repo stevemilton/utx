@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { WorkoutCard } from '../../components';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../constants/theme';
 import { useWorkoutStore, WorkoutSummary } from '../../stores/workoutStore';
 import { api } from '../../services/api';
 import type { MainTabScreenProps } from '../../navigation/types';
@@ -128,7 +129,9 @@ export const FeedScreen: React.FC = () => {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🚣</Text>
+      <View style={styles.emptyIconContainer}>
+        <Ionicons name="boat-outline" size={48} color={colors.textTertiary} />
+      </View>
       <Text style={styles.emptyTitle}>No workouts yet</Text>
       <Text style={styles.emptyText}>
         {activeFilter === 'all'
@@ -151,6 +154,9 @@ export const FeedScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Feed</Text>
+        <TouchableOpacity style={styles.headerButton}>
+          <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       {/* Filter tabs */}
@@ -205,41 +211,58 @@ export const FeedScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   filters: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    gap: 8,
+    backgroundColor: colors.background,
   },
   filterButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 100,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
   },
   filterButtonActive: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
   filterTextActive: {
-    color: colors.textPrimary,
+    color: colors.textInverse,
   },
   feedContent: {
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xxl,
   },
   loadingContainer: {
@@ -254,8 +277,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.xxl * 2,
   },
-  emptyIcon: {
-    fontSize: 64,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.lg,
   },
   emptyTitle: {
@@ -266,7 +294,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: fontSize.md,
-    color: colors.textTertiary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
   },

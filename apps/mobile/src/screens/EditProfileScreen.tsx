@@ -9,6 +9,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -205,8 +206,9 @@ export const EditProfileScreen: React.FC = () => {
               <Text style={styles.label}>Username</Text>
               <View style={styles.usernameInputWrapper}>
                 <Text style={styles.usernamePrefix}>@</Text>
-                <Input
+                <TextInput
                   placeholder="your_username"
+                  placeholderTextColor={colors.textTertiary}
                   value={username}
                   onChangeText={(text) => {
                     setUsernameError(null);
@@ -215,7 +217,7 @@ export const EditProfileScreen: React.FC = () => {
                   }}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  style={styles.usernameInput}
+                  style={styles.usernameTextInput}
                 />
               </View>
               {usernameError ? (
@@ -368,12 +370,23 @@ const styles = StyleSheet.create({
   usernameInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
   },
   usernamePrefix: {
     fontSize: fontSize.lg,
     color: colors.textSecondary,
     marginRight: spacing.xs,
     fontWeight: fontWeight.medium,
+  },
+  usernameTextInput: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
   },
   usernameInput: {
     flex: 1,

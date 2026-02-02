@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useAuthStore } from '../../stores/authStore';
@@ -20,7 +21,7 @@ const { width } = Dimensions.get('window');
 
 interface TutorialSlide {
   id: string;
-  icon: string;
+  iconName: keyof typeof Ionicons.glyphMap;
   title: string;
   description: string;
 }
@@ -28,21 +29,21 @@ interface TutorialSlide {
 const slides: TutorialSlide[] = [
   {
     id: '1',
-    icon: '📸',
+    iconName: 'camera-outline',
     title: 'Snap your screen',
     description:
       'After your workout, take a photo of your erg screen. UTx handles the rest.',
   },
   {
     id: '2',
-    icon: '🤖',
+    iconName: 'sparkles-outline',
     title: 'We do the rest',
     description:
       'Our AI reads the data from your photo - time, distance, splits, heart rate, everything.',
   },
   {
     id: '3',
-    icon: '📈',
+    iconName: 'trending-up-outline',
     title: 'Track your progress',
     description:
       'See your PBs, get coaching insights, and compare with your squad.',
@@ -67,6 +68,7 @@ export const TutorialScreen: React.FC = () => {
     try {
       // Build profile update payload
       const profileUpdates: Record<string, unknown> = {};
+      let avatarUrl: string | undefined;
 
       if (onboardingData.displayName) {
         profileUpdates.name = onboardingData.displayName;
@@ -88,6 +90,19 @@ export const TutorialScreen: React.FC = () => {
       }
       profileUpdates.hasCompletedOnboarding = true;
 
+      // Upload avatar if provided during onboarding
+      if (onboardingData.avatarUri) {
+        try {
+          const uploadResponse = await api.uploadAvatar(onboardingData.avatarUri);
+          if (uploadResponse.success && uploadResponse.data?.avatarUrl) {
+            avatarUrl = uploadResponse.data.avatarUrl;
+          }
+        } catch (uploadError) {
+          console.error('Avatar upload failed:', uploadError);
+          // Continue without avatar - user can add later
+        }
+      }
+
       // Save to backend
       const response = await api.updateProfile(profileUpdates);
 
@@ -100,6 +115,7 @@ export const TutorialScreen: React.FC = () => {
           birthDate: onboardingData.birthDate || undefined,
           gender: onboardingData.gender || undefined,
           maxHr: onboardingData.maxHr || undefined,
+          avatarUrl: avatarUrl,
         });
 
         // Clear onboarding store
@@ -129,7 +145,7 @@ export const TutorialScreen: React.FC = () => {
   const renderSlide = ({ item }: { item: TutorialSlide }) => (
     <View style={styles.slide}>
       <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{item.icon}</Text>
+        <Ionicons name={item.iconName} size={56} color={colors.primary} />
       </View>
       <Text style={styles.slideTitle}>{item.title}</Text>
       <Text style={styles.slideDescription}>{item.description}</Text>
@@ -215,7 +231,7 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 4,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundTertiary,
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -248,13 +264,10 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xxl,
-  },
-  icon: {
-    fontSize: 56,
   },
   slideTitle: {
     fontSize: fontSize.xxxl,
@@ -279,7 +292,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundTertiary,
   },
   dotActive: {
     backgroundColor: colors.primary,

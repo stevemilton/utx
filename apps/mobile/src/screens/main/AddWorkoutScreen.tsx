@@ -228,8 +228,10 @@ export const AddWorkoutScreen: React.FC = () => {
                   setShowForm(false);
                   setSelectedImage(null);
                 }}
+                style={styles.backButton}
               >
-                <Text style={styles.backButton}>← Back</Text>
+                <Ionicons name="arrow-back" size={20} color={colors.primary} />
+                <Text style={styles.backButtonText}>Back</Text>
               </TouchableOpacity>
               <Text style={styles.title}>Workout Details</Text>
             </View>
@@ -487,7 +489,7 @@ export const AddWorkoutScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   scrollView: {
     flex: 1,
@@ -497,9 +499,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  backButtonText: {
     fontSize: fontSize.md,
     color: colors.primary,
-    marginBottom: spacing.sm,
   },
   title: {
     fontSize: fontSize.xxxl,
@@ -661,7 +668,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   typeButtonTextActive: {
-    color: colors.textPrimary,
+    color: colors.textInverse,
   },
   saveButton: {
     marginTop: spacing.lg,

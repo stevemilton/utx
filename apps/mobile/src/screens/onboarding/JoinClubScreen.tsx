@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   },
   clubItemSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryDark + '10',
+    backgroundColor: colors.primarySubtle,
   },
   clubIcon: {
     width: 48,
