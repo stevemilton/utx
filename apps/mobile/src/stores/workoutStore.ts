@@ -14,6 +14,27 @@ export interface HrDataPoint {
   heartRate: number;
 }
 
+export interface WorkoutUser {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
+
+export interface WorkoutReaction {
+  id: string;
+  userId: string;
+  user: WorkoutUser;
+  createdAt: string;
+}
+
+export interface WorkoutComment {
+  id: string;
+  userId: string;
+  user: WorkoutUser;
+  content: string;
+  createdAt: string;
+}
+
 export interface Workout {
   id: string;
   userId: string;
@@ -38,6 +59,9 @@ export interface Workout {
   notes?: string;
   workoutDate: string;
   createdAt: string;
+  user?: WorkoutUser;
+  reactions?: WorkoutReaction[];
+  comments?: WorkoutComment[];
 }
 
 export interface WorkoutSummary {

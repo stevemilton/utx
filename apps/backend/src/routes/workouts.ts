@@ -3,6 +3,7 @@ import { WorkoutType, PbCategory } from '@prisma/client';
 import OpenAI from 'openai';
 import { calculateEffortScore } from '../utils/effortScore.js';
 import { generateCoachingInsight } from '../utils/aiCoaching.js';
+import { autoSyncToStrava } from '../utils/stravaSync.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -161,6 +162,14 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         });
       }
 
+      // Auto-sync to Strava if enabled (async, non-blocking)
+      autoSyncToStrava(server.prisma, workout, {
+        info: (msg: string) => server.log.info(msg),
+        error: (err: any, msg: string) => server.log.error(err, msg),
+      }).catch(err => {
+        server.log.error(err, 'Failed to auto-sync workout to Strava');
+      });
+
       return reply.status(201).send({
         success: true,
         data: { workout },
@@ -237,6 +246,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
               id: true,
               name: true,
               avatarUrl: true,
+              maxHr: true,
             },
           },
           reactions: {
@@ -272,9 +282,120 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         });
       }
 
+      // Get comparison data: last similar workout
+      let lastSimilar = null;
+      try {
+        const previousWorkout = await server.prisma.workout.findFirst({
+          where: {
+            userId: workout.userId,
+            workoutType: workout.workoutType,
+            id: { not: workout.id },
+            workoutDate: { lt: workout.workoutDate },
+          },
+          orderBy: { workoutDate: 'desc' },
+          select: {
+            id: true,
+            workoutDate: true,
+            totalTimeSeconds: true,
+            averageSplitSeconds: true,
+            avgHeartRate: true,
+            effortScore: true,
+          },
+        });
+
+        if (previousWorkout) {
+          lastSimilar = {
+            id: previousWorkout.id,
+            date: previousWorkout.workoutDate.toISOString(),
+            totalTimeSeconds: previousWorkout.totalTimeSeconds,
+            averageSplitSeconds: previousWorkout.averageSplitSeconds,
+            avgHeartRate: previousWorkout.avgHeartRate,
+            effortScore: previousWorkout.effortScore,
+          };
+        }
+      } catch (err) {
+        request.log.error(err, 'Failed to fetch comparison data');
+      }
+
+      // Get personal best for this workout type
+      let personalBest = null;
+      try {
+        const pbCategory = distanceToPbCategory(workout.totalDistanceMetres);
+        if (pbCategory) {
+          const pb = await server.prisma.personalBest.findUnique({
+            where: {
+              userId_category: {
+                userId: workout.userId,
+                category: pbCategory,
+              },
+            },
+            select: {
+              timeSeconds: true,
+              achievedAt: true,
+            },
+          });
+
+          if (pb && pb.timeSeconds !== workout.totalTimeSeconds) {
+            personalBest = {
+              timeSeconds: pb.timeSeconds,
+              achievedAt: pb.achievedAt.toISOString(),
+            };
+          }
+        }
+      } catch (err) {
+        request.log.error(err, 'Failed to fetch personal best');
+      }
+
+      // Calculate HR zone breakdown if hrData exists
+      let hrZoneBreakdown = null;
+      if (workout.hrData && workout.user?.maxHr) {
+        try {
+          const hrDataArray = workout.hrData as Array<{ timeSeconds: number; heartRate: number }>;
+          const maxHr = workout.user.maxHr;
+
+          // Calculate time in each zone
+          let zone1Seconds = 0;
+          let zone2Seconds = 0;
+          let zone3Seconds = 0;
+          let zone4Seconds = 0;
+          let zone5Seconds = 0;
+
+          for (let i = 0; i < hrDataArray.length - 1; i++) {
+            const hr = hrDataArray[i].heartRate;
+            const duration = hrDataArray[i + 1].timeSeconds - hrDataArray[i].timeSeconds;
+            const hrPercent = (hr / maxHr) * 100;
+
+            if (hrPercent < 60) zone1Seconds += duration;
+            else if (hrPercent < 70) zone2Seconds += duration;
+            else if (hrPercent < 80) zone3Seconds += duration;
+            else if (hrPercent < 90) zone4Seconds += duration;
+            else zone5Seconds += duration;
+          }
+
+          hrZoneBreakdown = {
+            zone1Seconds: Math.round(zone1Seconds),
+            zone2Seconds: Math.round(zone2Seconds),
+            zone3Seconds: Math.round(zone3Seconds),
+            zone4Seconds: Math.round(zone4Seconds),
+            zone5Seconds: Math.round(zone5Seconds),
+          };
+        } catch (err) {
+          request.log.error(err, 'Failed to calculate HR zones');
+        }
+      }
+
+      const comparison = (lastSimilar || personalBest) ? {
+        lastSimilar,
+        personalBest,
+      } : null;
+
       return reply.send({
         success: true,
-        data: { workout },
+        data: {
+          workout,
+          comparison,
+          hrZoneBreakdown,
+        },
       });
     }
   );

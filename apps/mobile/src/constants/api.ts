@@ -118,5 +118,7 @@ export const ENDPOINTS = {
     callback: '/strava/callback',
     sync: '/strava/sync',
     disconnect: '/strava/disconnect',
+    status: '/strava/status',
+    settings: '/strava/settings',
   },
 };

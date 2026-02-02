@@ -7,7 +7,27 @@ export async function stravaRoutes(fastify: FastifyInstance) {
 
   const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
   const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
-  const STRAVA_REDIRECT_URI = process.env.STRAVA_REDIRECT_URI || 'utx://strava-callback';
+  const STRAVA_REDIRECT_URI = process.env.STRAVA_REDIRECT_URI || 'https://utx-production.up.railway.app/strava/mobile-callback';
+
+  // Mobile callback - redirects to app with OAuth code
+  fastify.get('/mobile-callback', async (request, reply) => {
+    const { code, error, state } = request.query as { code?: string; error?: string; state?: string };
+
+    if (error) {
+      // Redirect to app with error
+      return reply.redirect(`utx://strava-callback?error=${encodeURIComponent(error)}`);
+    }
+
+    if (code) {
+      // Redirect to app with code
+      const params = new URLSearchParams({ code });
+      if (state) params.set('state', state);
+      return reply.redirect(`utx://strava-callback?${params.toString()}`);
+    }
+
+    // No code or error - redirect with generic error
+    return reply.redirect('utx://strava-callback?error=unknown');
+  });
 
   // Get Strava auth URL
   fastify.get('/auth-url', {
@@ -77,11 +97,12 @@ export async function stravaRoutes(fastify: FastifyInstance) {
         expires_at: number;
       };
 
-      // Save tokens to user
+      // Save tokens to user (auto-sync defaults to true on first connect)
       await prisma.user.update({
         where: { id: userId },
         data: {
           stravaConnected: true,
+          stravaAutoSync: true,
           stravaAccessToken: data.access_token,
           stravaRefreshToken: data.refresh_token,
           stravaTokenExpiresAt: new Date(data.expires_at * 1000),
@@ -235,14 +256,36 @@ export async function stravaRoutes(fastify: FastifyInstance) {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { stravaConnected: true },
+      select: { stravaConnected: true, stravaAutoSync: true },
     });
 
     return {
       success: true,
       data: {
         connected: user?.stravaConnected || false,
+        autoSync: user?.stravaAutoSync ?? true,
       },
+    };
+  });
+
+  // Update auto-sync setting
+  fastify.patch<{
+    Body: { autoSync: boolean };
+  }>('/settings', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = (request as any).userId;
+    const { autoSync } = request.body;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { stravaAutoSync: autoSync },
+    });
+
+    return {
+      success: true,
+      message: `Auto-sync ${autoSync ? 'enabled' : 'disabled'}`,
+      data: { autoSync },
     };
   });
 }
