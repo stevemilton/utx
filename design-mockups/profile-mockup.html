@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390, initial-scale=1.0">
+  <title>UTx - Profile Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-light: #FF8F66;
+      --primary-dark: #E55A2B;
+      --bg: #000000;
+      --bg-secondary: #0A0A0A;
+      --surface: #1C1C1E;
+      --surface-light: #2C2C2E;
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #636366;
+      --border: #38383A;
+      --success: #30D158;
+      --error: #FF453A;
+      --pb-gold: #FFD700;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+      gap: 40px;
+    }
+
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 0 50px 100px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 34px;
+      background: #000;
+      border-radius: 0 0 24px 24px;
+      z-index: 10;
+    }
+
+    .status-bar {
+      height: 54px;
+      padding: 14px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .content {
+      height: calc(100% - 54px - 83px);
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+
+    /* Header */
+    .header {
+      padding: 8px 20px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* Profile Card */
+    .profile-card {
+      margin: 0 16px 20px;
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 24px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .avatar-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      color: white;
+      position: relative;
+    }
+
+    .avatar-edit {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 28px;
+      height: 28px;
+      border-radius: 14px;
+      background: var(--surface-light);
+      border: 3px solid var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .profile-info {
+      flex: 1;
+    }
+
+    .profile-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .profile-stats-inline {
+      display: flex;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .edit-profile-btn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: var(--surface-light);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .stat-item {
+      background: var(--bg);
+      padding: 16px 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 4px;
+    }
+
+    /* Section */
+    .section {
+      margin: 0 16px 20px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .section-action {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* PB Grid */
+    .pb-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .pb-item {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .pb-label {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-bottom: 6px;
+    }
+
+    .pb-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .pb-value.empty {
+      color: var(--text-tertiary);
+      font-size: 14px;
+    }
+
+    .pb-item.highlight {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 165, 0, 0.1));
+      border: 1px solid var(--pb-gold);
+    }
+
+    .pb-item.highlight .pb-value {
+      color: var(--pb-gold);
+    }
+
+    /* Clubs Section */
+    .club-card {
+      background: var(--surface);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .club-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .club-item:last-child {
+      border-bottom: none;
+    }
+
+    .club-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .club-info {
+      flex: 1;
+    }
+
+    .club-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .club-location {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    .club-chevron {
+      color: var(--text-tertiary);
+      font-size: 18px;
+    }
+
+    .add-club-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 16px;
+      gap: 8px;
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    .add-club-text {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    /* Settings List */
+    .settings-card {
+      background: var(--surface);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .settings-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .settings-item:last-child {
+      border-bottom: none;
+    }
+
+    .settings-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--surface-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .settings-content {
+      flex: 1;
+    }
+
+    .settings-label {
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+
+    .settings-sublabel {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    .settings-badge {
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: rgba(48, 209, 88, 0.15);
+      color: var(--success);
+    }
+
+    .badge-connect {
+      background: var(--surface-light);
+      color: var(--text-secondary);
+    }
+
+    .settings-chevron {
+      color: var(--text-tertiary);
+      font-size: 18px;
+    }
+
+    .settings-item.danger .settings-label {
+      color: var(--error);
+    }
+
+    /* Tab Bar */
+    .tab-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 83px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      padding-top: 8px;
+    }
+
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 16px;
+    }
+
+    .tab-icon {
+      font-size: 24px;
+      opacity: 0.5;
+    }
+
+    .tab-item.active .tab-icon {
+      opacity: 1;
+    }
+
+    .tab-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    .tab-item.active .tab-label {
+      color: var(--primary);
+    }
+
+    /* App Version */
+    .app-version {
+      text-align: center;
+      padding: 32px 0 16px;
+    }
+
+    .app-logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .app-ver {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .app-tagline {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-style: italic;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="notch"></div>
+    <div class="status-bar">
+      <span>9:41</span>
+      <span style="display: flex; gap: 4px; align-items: center;">
+        <span style="font-size: 12px;">5G</span>
+        <span style="font-size: 16px;">📶</span>
+        <span style="font-size: 16px;">🔋</span>
+      </span>
+    </div>
+
+    <div class="content">
+      <div class="header">
+        <h1>Profile</h1>
+      </div>
+
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-large">
+            JT
+            <div class="avatar-edit">✎</div>
+          </div>
+          <div class="profile-info">
+            <div class="profile-name">James Thompson</div>
+            <div class="profile-stats-inline">
+              <span>185cm</span>
+              <span>•</span>
+              <span>82kg</span>
+              <span>•</span>
+              <span>HR 192</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">127</div>
+            <div class="stat-label">Workouts</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">1.2M</div>
+            <div class="stat-label">Metres</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">156h</div>
+            <div class="stat-label">Time</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Personal Bests -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Personal Bests</span>
+          <span class="section-action">See All →</span>
+        </div>
+
+        <div class="pb-grid">
+          <div class="pb-item highlight">
+            <div class="pb-label">500m</div>
+            <div class="pb-value">1:22.4</div>
+          </div>
+          <div class="pb-item highlight">
+            <div class="pb-label">2K</div>
+            <div class="pb-value">6:49.2</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-label">5K</div>
+            <div class="pb-value">18:32.1</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-label">10K</div>
+            <div class="pb-value">38:45.8</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-label">1 Min</div>
+            <div class="pb-value">382m</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-label">HM</div>
+            <div class="pb-value empty">Set PB →</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clubs -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Clubs</span>
+        </div>
+
+        <div class="club-card">
+          <div class="club-item">
+            <div class="club-icon">LC</div>
+            <div class="club-info">
+              <div class="club-name">London Rowing Club</div>
+              <div class="club-location">Putney, London</div>
+            </div>
+            <span class="club-chevron">›</span>
+          </div>
+        </div>
+
+        <div class="add-club-item">
+          <span style="color: var(--text-tertiary);">+</span>
+          <span class="add-club-text">Join another club</span>
+        </div>
+      </div>
+
+      <!-- Connections -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Connections</span>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-item">
+            <div class="settings-icon">🏃</div>
+            <div class="settings-content">
+              <div class="settings-label">Strava</div>
+              <div class="settings-sublabel">Auto-sync workouts</div>
+            </div>
+            <span class="settings-badge badge-success">Connected</span>
+          </div>
+          <div class="settings-item">
+            <div class="settings-icon">❤️</div>
+            <div class="settings-content">
+              <div class="settings-label">Apple Health</div>
+              <div class="settings-sublabel">Sync heart rate data</div>
+            </div>
+            <span class="settings-badge badge-connect">Connect</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Settings</span>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-item">
+            <div class="settings-icon">🔔</div>
+            <div class="settings-content">
+              <div class="settings-label">Notifications</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+          <div class="settings-item">
+            <div class="settings-icon">❓</div>
+            <div class="settings-content">
+              <div class="settings-label">Help & Support</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+          <div class="settings-item">
+            <div class="settings-icon">🔒</div>
+            <div class="settings-content">
+              <div class="settings-label">Privacy</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Actions -->
+      <div class="section">
+        <div class="settings-card">
+          <div class="settings-item">
+            <div class="settings-icon">🚪</div>
+            <div class="settings-content">
+              <div class="settings-label">Log Out</div>
+            </div>
+          </div>
+          <div class="settings-item danger">
+            <div class="settings-icon">⚠️</div>
+            <div class="settings-content">
+              <div class="settings-label">Delete Account</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-version">
+        <div class="app-logo">UTx</div>
+        <div class="app-ver">Version 1.0.0</div>
+        <div class="app-tagline">Every metre counts.</div>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <div class="tab-item">
+        <span class="tab-icon">🏠</span>
+        <span class="tab-label">Feed</span>
+      </div>
+      <div class="tab-item">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">Workouts</span>
+      </div>
+      <div class="tab-item">
+        <span class="tab-icon">🏆</span>
+        <span class="tab-label">Leaderboard</span>
+      </div>
+      <div class="tab-item active">
+        <span class="tab-icon">👤</span>
+        <span class="tab-label">Profile</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

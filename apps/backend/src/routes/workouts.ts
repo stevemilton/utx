@@ -615,8 +615,14 @@ Only return valid JSON, no other text.`,
         } else if (error?.code === 'rate_limit_exceeded') {
           errorMessage = 'OCR service rate limit reached. Please try again later';
         } else if (error?.message?.includes('Could not parse')) {
-          errorMessage = 'Could not read the erg screen. Please ensure the screen is clearly visible';
+          errorMessage = 'Could not read the erg screen. Please ensure the screen is clearly visible and shows workout data.';
+        } else if (error?.message?.includes('No response')) {
+          errorMessage = 'No response from OCR service. Please try again.';
+        } else if (error?.message?.includes('JSON')) {
+          errorMessage = 'Could not parse erg screen data. Try a clearer photo.';
         }
+
+        request.log.error({ errorDetail: error?.message }, 'OCR error detail');
 
         return reply.status(500).send({
           success: false,
