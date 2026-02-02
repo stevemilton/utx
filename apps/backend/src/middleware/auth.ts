@@ -81,11 +81,26 @@ export async function authenticate(
     }
 
     request.authUser = user;
-  } catch (error) {
+  } catch (error: any) {
     request.log.error(error, 'Token verification failed');
+
+    // Provide more specific error message for debugging
+    let errorMessage = 'Invalid token';
+    if (error?.code === 'auth/id-token-expired') {
+      errorMessage = 'Token expired. Please log in again.';
+    } else if (error?.code === 'auth/argument-error') {
+      errorMessage = 'Invalid token format';
+    } else if (error?.message?.includes('jwt malformed')) {
+      errorMessage = 'JWT verification failed - malformed token';
+    } else if (error?.message?.includes('invalid signature')) {
+      errorMessage = 'JWT verification failed - invalid signature (check JWT_SECRET)';
+    } else if (error?.message?.includes('jwt expired')) {
+      errorMessage = 'Token expired. Please log in again.';
+    }
+
     reply.status(401).send({
       success: false,
-      error: 'Invalid token',
+      error: errorMessage,
     });
   }
 }

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390, initial-scale=1.0">
+  <title>UTx - Welcome & Auth Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-light: #FF8F66;
+      --primary-dark: #E55A2B;
+      --bg: #000000;
+      --surface: #1C1C1E;
+      --surface-light: #2C2C2E;
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #636366;
+      --border: #38383A;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .screen-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .screen-label {
+      color: #888;
+      font-size: 14px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 0 50px 100px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 34px;
+      background: #000;
+      border-radius: 0 0 24px 24px;
+      z-index: 10;
+    }
+
+    .status-bar {
+      height: 54px;
+      padding: 14px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .content {
+      height: calc(100% - 54px);
+      display: flex;
+      flex-direction: column;
+      padding: 0 24px 34px;
+    }
+
+    /* Welcome Screen */
+    .welcome-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding-bottom: 60px;
+    }
+
+    /* Logo */
+    .logo {
+      width: 140px;
+      height: 140px;
+      margin-bottom: 32px;
+      position: relative;
+    }
+
+    .logo-bg {
+      width: 140px;
+      height: 140px;
+      border-radius: 32px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 60px rgba(255, 107, 53, 0.3);
+    }
+
+    .logo-text {
+      font-size: 48px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -2px;
+    }
+
+    .logo-accent {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 32px;
+      height: 32px;
+      background: var(--surface);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      border: 3px solid var(--bg);
+    }
+
+    .tagline {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .tagline-accent {
+      color: var(--primary);
+    }
+
+    .description {
+      font-size: 17px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 300px;
+    }
+
+    /* Buttons */
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(255, 107, 53, 0.4);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-primary);
+      border: 2px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text-secondary);
+    }
+
+    .btn-social {
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+
+    .btn-social:hover {
+      background: var(--surface-light);
+    }
+
+    .btn-icon {
+      font-size: 20px;
+    }
+
+    /* Auth Screen */
+    .auth-header {
+      padding: 20px 0 32px;
+    }
+
+    .back-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 22px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      margin-bottom: 24px;
+    }
+
+    .auth-title {
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+      font-size: 17px;
+      color: var(--text-secondary);
+    }
+
+    .social-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider-text {
+      font-size: 14px;
+      color: var(--text-tertiary);
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .input {
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      color: var(--text-primary);
+      font-size: 17px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .auth-footer {
+      margin-top: auto;
+      padding-top: 24px;
+    }
+
+    .terms {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      text-align: center;
+      line-height: 1.6;
+      margin-top: 16px;
+    }
+
+    .terms a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    /* Feature highlights */
+    .features {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 40px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    .feature {
+      text-align: center;
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .feature-text {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <!-- Welcome Screen -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Welcome Screen</div>
+    <div class="phone-frame">
+      <div class="notch"></div>
+      <div class="status-bar">
+        <span>9:41</span>
+        <span style="display: flex; gap: 4px; align-items: center;">
+          <span style="font-size: 12px;">5G</span>
+          <span style="font-size: 16px;">📶</span>
+          <span style="font-size: 16px;">🔋</span>
+        </span>
+      </div>
+
+      <div class="content">
+        <div class="welcome-content">
+          <div class="logo">
+            <div class="logo-bg">
+              <span class="logo-text">UTx</span>
+            </div>
+            <div class="logo-accent">🚣</div>
+          </div>
+
+          <h1 class="tagline">Every metre<br><span class="tagline-accent">counts.</span></h1>
+
+          <p class="description">
+            Turn your erg screen photos into structured training data with AI-powered analysis.
+          </p>
+
+          <div class="features">
+            <div class="feature">
+              <div class="feature-icon">📸</div>
+              <div class="feature-text">Snap & Log</div>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">📊</div>
+              <div class="feature-text">Track PBs</div>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">👥</div>
+              <div class="feature-text">Squad Up</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button class="btn btn-primary">Get Started</button>
+          <button class="btn btn-outline">I have an account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Screen -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Sign Up / Login</div>
+    <div class="phone-frame">
+      <div class="notch"></div>
+      <div class="status-bar">
+        <span>9:41</span>
+        <span style="display: flex; gap: 4px; align-items: center;">
+          <span style="font-size: 12px;">5G</span>
+          <span style="font-size: 16px;">📶</span>
+          <span style="font-size: 16px;">🔋</span>
+        </span>
+      </div>
+
+      <div class="content">
+        <div class="auth-header">
+          <div class="back-btn">←</div>
+          <h1 class="auth-title">Welcome back</h1>
+          <p class="auth-subtitle">Sign in to continue your training journey</p>
+        </div>
+
+        <div class="social-buttons">
+          <button class="btn btn-social">
+            <span class="btn-icon"></span>
+            Continue with Apple
+          </button>
+          <button class="btn btn-social">
+            <span class="btn-icon">G</span>
+            Continue with Google
+          </button>
+        </div>
+
+        <div class="divider">
+          <div class="divider-line"></div>
+          <span class="divider-text">or</span>
+          <div class="divider-line"></div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Email</label>
+          <input type="email" class="input" placeholder="your@email.com">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Password</label>
+          <input type="password" class="input" placeholder="••••••••">
+        </div>
+
+        <div class="auth-footer">
+          <button class="btn btn-primary">Sign In</button>
+          <p class="terms">
+            By continuing, you agree to our<br>
+            <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
