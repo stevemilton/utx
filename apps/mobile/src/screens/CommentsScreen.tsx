@@ -123,7 +123,7 @@ export const CommentsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
           <Ionicons name="close" size={24} color={colors.textSecondary} />
@@ -135,7 +135,7 @@ export const CommentsScreen: React.FC = () => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -151,6 +151,7 @@ export const CommentsScreen: React.FC = () => {
               comments.length === 0 && styles.emptyList,
             ]}
             ListEmptyComponent={renderEmpty}
+            keyboardShouldPersistTaps="handled"
           />
         )}
 

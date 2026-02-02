@@ -1,124 +1,72 @@
 # UTx Development Status
 
-**Last Updated:** 1 February 2026, 9:30 PM
-**Current Build:** 18 (building on EAS, auto-submitting to TestFlight)
-**Branch:** `mystifying-keller` (merged to `main`)
+**Last Updated:** 2 February 2026, 1:45 PM
+**Current Build:** 27 (in TestFlight)
+**Branch:** `loving-visvesvaraya`
 
 ---
 
-## What Was Done Today
+## Build 27 - Full Light Mode Redesign ✅
 
-### Bug Fixes
-- ✅ Fixed `formatTime` null check crash in WorkoutsScreen
-- ✅ Fixed OCR timeout (increased from 30s to 60s for GPT-4o Vision)
-- ✅ Added better error messages for OCR failures (timeout, network)
-- ✅ Fixed date picker visibility on onboarding (added `themeVariant="dark"`)
+**Status:** Submitted to TestFlight
+**Build ID:** `43f26ba4-e3dd-4e84-b99f-46d25f5f0de1`
+**Commit:** `6a6c9b1` - "Full light mode redesign with Ionicons"
 
-### New Features
-- ✅ **Username/Nickname** - Users can set @username for discovery
-  - Backend: `username` field in Prisma schema (unique, optional)
-  - Backend: Validation (3-20 chars, lowercase alphanumeric + underscore)
-  - Backend: Search by name OR username in `/users/search`
-  - Mobile: EditProfileScreen with username field
-  - Mobile: AthleteSearchScreen displays usernames
+### Major Changes
+- **Complete light mode redesign** across all 25+ screens
+- **Primary color changed** to Petrol Blue (`#0D4F4F`)
+- **All emojis replaced** with Ionicons throughout the app
+- **Premium Whoop/Strava-style UI** - clean, light backgrounds
+- **White splash screen** and adaptive icon backgrounds
 
-- ✅ **Profile Privacy** - Public/private toggle
-  - Backend: `isPublic` field in Prisma schema (default: true)
-  - Backend: Search only returns public profiles
-  - Mobile: Toggle in Settings > Privacy section
-
-- ✅ **Athlete Search** - Find and follow other rowers
-  - New `AthleteSearchScreen.tsx`
-  - Search by name or @username
-  - Follow/unfollow with optimistic updates
-  - Shows workout count, follower count
-
-- ✅ **Edit Profile Screen** - Full profile editing
-  - New `EditProfileScreen.tsx`
-  - Change avatar (camera or gallery)
-  - Edit name, username, height, weight, max HR
-
-- ✅ **Settings Reorganized**
-  - Added Privacy section with public profile toggle
-  - Added Social section with "Find Athletes"
-  - Added Club section with "Change Club"
-  - Icons throughout using @expo/vector-icons
-
-- ✅ **Tab Bar Icons** - Added Ionicons to bottom navigation
-
-### Files Created
-- `apps/mobile/src/screens/AthleteSearchScreen.tsx`
-- `apps/mobile/src/screens/EditProfileScreen.tsx`
-- `apps/mobile/src/screens/ClubSearchScreen.tsx`
-
-### Files Modified
-- `apps/backend/prisma/schema.prisma` - Added `username`, `isPublic`
-- `apps/backend/src/routes/users.ts` - Username validation, search by username
-- `apps/mobile/src/stores/authStore.ts` - Added `username`, `isPublic` to UserProfile
-- `apps/mobile/src/services/api.ts` - Added timeout option, 60s OCR timeout
-- `apps/mobile/src/screens/SettingsScreen.tsx` - New sections
-- `apps/mobile/src/screens/CameraScreen.tsx` - Better error handling
-- `apps/mobile/src/screens/main/WorkoutsScreen.tsx` - formatTime null fix
-- `apps/mobile/src/navigation/*` - Registered new screens
+### Files Modified (25 files)
+| Category | Files |
+|----------|-------|
+| Theme | `theme.ts` |
+| Main Screens | `FeedScreen`, `ProfileScreen`, `WorkoutsScreen`, `LeaderboardScreen` |
+| Workout | `WorkoutDetailScreen`, `WorkoutCard`, `AddWorkoutScreen`, `WorkoutEditScreen` |
+| Camera | `CameraScreen` |
+| Social | `CommentsScreen`, `ClubDetailScreen`, `SquadDetailScreen`, `UserProfileScreen` |
+| Profile | `EditProfileScreen` |
+| Auth | `AuthScreen`, `PhoneAuthScreen`, `VerifyCodeScreen` |
+| Onboarding | `TutorialScreen`, `ProfileSetupScreen`, `ProfilePhysicalScreen`, `HRSetupScreen`, `JoinClubScreen` |
+| Config | `app.config.js` (splash/icon backgrounds → white) |
 
 ---
 
-## Current State
+## What to Test in Build 27
 
-### Deployment
-- **GitHub:** Code pushed to `main`
-- **Railway:** Backend deployed with new schema (username, isPublic fields migrated)
-- **EAS/TestFlight:** Build 18 in progress, will auto-submit
-
-### What to Test When Build 18 Arrives
-1. Sign in with Apple/Google
-2. Complete onboarding (check date picker is visible)
-3. Go to Settings > Edit Profile - test username field
-4. Go to Settings > Privacy - toggle public/private
-5. Go to Settings > Social > Find Athletes - search and follow
-6. Add Workout > Take Photo - test OCR (should have 60s timeout now)
-7. Check all tab icons display correctly
+1. **Visual** - All screens should be light mode (white backgrounds, Petrol Blue primary)
+2. **Icons** - No emojis anywhere, all Ionicons
+3. **Feed** - Workout cards with premium styling
+4. **Workout Detail** - Clean light design with proper metrics
+5. **Onboarding** - All screens in light mode with icon-based tutorial slides
+6. **Camera** - Light themed capture screen
+7. **Profile** - Clean edit profile with proper styling
 
 ---
 
-## MVP Checklist (from PRD)
+## Previous Builds
 
-### ✅ Must Have (Launch) - DONE
-- [x] Photo capture and AI data extraction (OCR)
-- [x] Training log with workout history
-- [x] Workout Report with HR analysis
-- [x] Effort Score calculation
-- [x] PB tracking and notifications
-- [x] AI coaching insights (post-workout)
-- [x] User profiles with physical stats
-- [x] Firebase auth (Apple, Google)
-- [x] Strava export
-- [x] Clubs and Squads with roles (data model)
-- [x] Squad feed
-- [x] Basic leaderboards
+### Build 26
+- Not built (EAS quota exceeded before upgrade)
 
-### ⚠️ Should Have (Fast Follow) - PARTIAL
-- [x] Following/followers and social feed
-- [x] Reactions and comments (backend done)
-- [x] Username for discovery
-- [x] Profile privacy toggle
-- [ ] Club-wide feed opt-in
-- [ ] Weekly trend insights from AI
-- [ ] Push notifications
+### Build 25
+- v3 design with orange primary color
+- Bug fixes for workout detail crash, HR setup keyboard, OCR camera guidelines
 
-### ❌ Known Issues
-- **Phone auth disabled** - Expo managed workflow limitation, users must use Apple/Google
-- **OCR needs real-world testing** - Increased timeout, but need to verify accuracy
-- **Club join flow** - ClubSearchScreen exists but needs polish
+### Build 24
+- Fixed workout detail crash (formatNumber null checks)
+- Fixed workout type badges
 
 ---
 
-## Next Session Priorities
+## Known Issues
 
-1. **Test Build 18** - Verify all new features work on device
-2. **Fix any bugs found** in testing
-3. **Polish Club flow** - ClubSearchScreen needs work
-4. **Consider:** Reactions/comments UI on feed cards
+| Issue | Status | Notes |
+|-------|--------|-------|
+| OCR via Camera timeout | Needs investigation | Gallery works, camera may send larger images |
+| Phone auth | Disabled | Expo managed workflow limitation - use Apple/Google |
 
 ---
 
@@ -126,20 +74,16 @@
 
 ```bash
 # Navigate to project
-cd /Users/stevemilton/.claude-worktrees/utx/mystifying-keller
-
-# Check build status
-cd apps/mobile && eas build:list --limit 1
+cd /Users/stevemilton/.claude-worktrees/utx/loving-visvesvaraya
 
 # Run new build
 cd apps/mobile && eas build --platform ios --profile production --auto-submit
 
-# Check Railway logs
-# (use Railway dashboard)
+# Test backend health
+curl https://utx-production.up.railway.app/health
 
-# TypeScript check
-cd apps/mobile && npx tsc --noEmit
-cd apps/backend && npx tsc --noEmit
+# Check build status
+cd apps/mobile && eas build:list --limit 1
 ```
 
 ---
@@ -149,10 +93,18 @@ cd apps/backend && npx tsc --noEmit
 | Purpose | File |
 |---------|------|
 | PRD (source of truth) | `UTx PRD v2.pdf` |
+| Theme | `apps/mobile/src/constants/theme.ts` |
+| WorkoutCard | `apps/mobile/src/components/WorkoutCard.tsx` |
 | Backend routes | `apps/backend/src/routes/*.ts` |
-| Prisma schema | `apps/backend/prisma/schema.prisma` |
 | Mobile screens | `apps/mobile/src/screens/*.tsx` |
 | Navigation | `apps/mobile/src/navigation/` |
 | Auth store | `apps/mobile/src/stores/authStore.ts` |
 | API service | `apps/mobile/src/services/api.ts` |
-| Theme | `apps/mobile/src/constants/theme.ts` |
+
+---
+
+## Links
+
+- **TestFlight:** https://appstoreconnect.apple.com/apps/6758580968/testflight/ios
+- **EAS Dashboard:** https://expo.dev/accounts/stevemilton/projects/utx/builds
+- **Build IPA:** https://expo.dev/artifacts/eas/9oDeL5tSG7z9iwn59BaeUM.ipa

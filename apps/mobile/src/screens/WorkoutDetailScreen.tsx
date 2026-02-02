@@ -59,9 +59,11 @@ const formatDistance = (metres: number | null | undefined): string => {
   return metres.toLocaleString();
 };
 
-// Format date
-const formatDate = (dateString: string): string => {
+// Format date - with null/invalid handling
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return '—';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -231,14 +233,6 @@ export const WorkoutDetailScreen: React.FC = () => {
     );
   };
 
-  const handleSync = async () => {
-    try {
-      await api.syncToStrava(workoutId);
-      Alert.alert('Success', 'Workout synced to Strava!');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to sync to Strava');
-    }
-  };
 
   // Calculate average pace from intervals
   const getAvgPace = (): number | null => {
@@ -568,15 +562,7 @@ export const WorkoutDetailScreen: React.FC = () => {
 
         {/* Action Buttons */}
         <View style={styles.actions}>
-          {/* Strava Sync */}
-          <TouchableOpacity style={styles.stravaButton} onPress={handleSync}>
-            <View style={styles.stravaIcon}>
-              <Text style={styles.stravaIconText}>S</Text>
-            </View>
-            <Text style={styles.stravaButtonText}>Sync to Strava</Text>
-          </TouchableOpacity>
-
-          {/* Secondary Actions */}
+          {/* Edit and Delete Actions */}
           <View style={styles.secondaryActions}>
             <TouchableOpacity style={styles.secondaryActionButton} onPress={handleEdit}>
               <Ionicons name="create-outline" size={20} color={lightColors.primary} />
@@ -1211,33 +1197,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginHorizontal: spacing.md,
     gap: spacing.md,
-  },
-  stravaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FC4C02',
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-  },
-  stravaIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stravaIconText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: '#FC4C02',
-  },
-  stravaButtonText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: '#fff',
   },
   secondaryActions: {
     flexDirection: 'row',

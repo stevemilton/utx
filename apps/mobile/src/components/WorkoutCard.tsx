@@ -209,7 +209,9 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginVertical: spacing.sm,
     overflow: 'hidden',
-    ...shadows.md,
+    ...shadows.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   header: {
     flexDirection: 'row',
@@ -290,11 +292,11 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.primarySubtle,
     paddingVertical: spacing.md,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
   },
   metricItem: {
     flex: 1,

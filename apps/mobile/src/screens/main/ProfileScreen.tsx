@@ -606,7 +606,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
-    ...shadows.md,
+    ...shadows.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   profileContent: {
     flexDirection: 'row',
@@ -695,7 +697,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    ...shadows.sm,
+    ...shadows.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   pbGrid: {
     flexDirection: 'row',
@@ -703,13 +707,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pbItem: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundTertiary,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     minWidth: '30%',
     flex: 1,
     alignItems: 'center',
     ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   pbLabel: {
     fontSize: fontSize.sm,
@@ -806,7 +812,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderStrong,
   },
   settingIcon: {
     width: 32,
