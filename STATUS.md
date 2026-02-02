@@ -1,127 +1,79 @@
 # UTx Development Status
 
-**Last Updated:** 2 February 2026, 4:30 PM
-**Current Build:** 28 (in TestFlight)
+**Last Updated:** 2 February 2026, 6:30 PM
+**Current Build:** 29 (building)
 **Branch:** `ecstatic-satoshi`
 
 ---
 
-## Latest Session Changes (Pending Build 30)
+## Build 29 - Strava Auto-Sync Integration
 
-### P0 Fix: Workout Detail Screen Complete Redesign
+**Status:** Building on EAS
+**Build URL:** https://expo.dev/accounts/stevemilton/projects/utx/builds/34e4ee81-2fd0-496b-b147-380a14f43b5e
 
-**Critical Bug Fixed:** Data not showing on Workout Detail screen (all metrics showed dashes)
-- Root cause: Frontend expected `response.data` to be the workout, but backend returned `response.data.workout`
-- Fix: Updated data extraction in `WorkoutDetailScreen.tsx`
+### Strava Integration (Complete)
 
-### New Whoop/Strava-Inspired Workout Detail Screen
-
-| Section | Description |
+| Feature | Description |
 |---------|-------------|
-| **Hero Section** | Large split time display (/500m), workout type badge, PB badge, date |
-| **Quick Stats Row** | Floating card with Distance, Time, SPM, Watts |
-| **Effort Ring** | Whoop-style circular gauge (0-10) with color coding and contextual labels |
-| **HR Analysis** | Avg/Max BPM + zone distribution bar (Z1-Z5) |
-| **Splits Table** | Enhanced with pace highlighting (fastest=green, slowest=amber, "Best" tag) |
-| **Comparison Section** | vs Last Similar Workout with deltas (time, split, HR, effort) |
-| **PB Gap Card** | Shows gap to personal best when not a PB |
-| **Social Section** | Reactions with avatars, comments preview |
-| **AI Coaching** | Styled insight card with sparkles icon |
-| **Notes & Photo** | User notes and original erg screen photo |
+| **Auto-sync on workout creation** | Workouts automatically push to Strava when user has it connected |
+| **OAuth flow with backend redirect** | `/strava/mobile-callback` redirects to `utx://strava-callback` |
+| **Deep link handling** | App handles `utx://strava-callback?code=...` on return from OAuth |
+| **Auto-sync toggle** | Users can enable/disable auto-sync in Settings |
+| **Connection status API** | `GET /strava/status` returns `{ connected, autoSync }` |
 
-### New Components Created
-
-| Component | File | Description |
-|-----------|------|-------------|
-| **EffortRing** | `components/EffortRing.tsx` | Circular SVG gauge, color transitions, contextual labels |
-| **ZoneBar** | `components/ZoneBar.tsx` | HR zone distribution bar with legend |
-| **ComparisonCard** | `components/ComparisonCard.tsx` | Metric comparison with delta indicators |
-
-### Backend Enhancements
-
-Enhanced `GET /workouts/:workoutId` response now includes:
-
-```typescript
-{
-  workout: Workout,
-  comparison: {
-    lastSimilar: { id, date, totalTimeSeconds, averageSplitSeconds, avgHeartRate, effortScore },
-    personalBest: { timeSeconds, achievedAt }
-  },
-  hrZoneBreakdown: { zone1Seconds, zone2Seconds, zone3Seconds, zone4Seconds, zone5Seconds }
-}
-```
-
-### Theme Update
-
-Aligned with `loving-visvesvaraya` branch:
-- Light mode with Petrol Blue (#0D4F4F) as primary
-- White backgrounds, dark text
-- Enhanced shadows for card definition
-
-### Files Modified
+### Files Modified/Created
 
 | File | Changes |
 |------|---------|
-| `WorkoutDetailScreen.tsx` | Complete redesign with all new sections |
-| `workouts.ts` (backend) | Added comparison data and HR zone calculation |
-| `workoutStore.ts` | Added types for reactions, comments, user |
-| `theme.ts` | Light mode design system |
-| `components/index.ts` | Export new components |
+| `schema.prisma` | Added `stravaAutoSync` field to User model |
+| `strava.ts` (routes) | Added `/mobile-callback`, `/status`, `PATCH /settings` endpoints |
+| `workouts.ts` (routes) | Calls `autoSyncToStrava()` after workout creation |
+| `stravaSync.ts` (NEW) | Utility for auto-syncing workouts to Strava |
+| `App.tsx` | Deep link handling for Strava OAuth callback |
+| `SettingsScreen.tsx` | Strava connection UI with auto-sync toggle |
+| `api.ts` | Added `getStravaStatus()`, `updateStravaSettings()` methods |
+| `api.ts` (constants) | Added `/strava/status`, `/strava/settings` endpoints |
 
-### Files Created
+### Environment Variables Required (Railway)
 
-| File | Purpose |
-|------|---------|
-| `components/EffortRing.tsx` | Whoop-style effort gauge |
-| `components/ZoneBar.tsx` | HR zone distribution |
-| `components/ComparisonCard.tsx` | Performance comparison display |
+```
+STRAVA_CLIENT_ID=<your_client_id>
+STRAVA_CLIENT_SECRET=<your_client_secret>
+STRAVA_REDIRECT_URI=https://utx-production.up.railway.app/strava/mobile-callback
+```
 
----
+### Strava API Settings
 
-## What to Test in Build 30
-
-### Workout Detail Screen (P0)
-1. **Data displays correctly** - Distance, Time, Split, Rate should show actual values
-2. **Hero split time** - Large split time with /500m label
-3. **Effort Ring** - Circular gauge with score and label (if effort score exists)
-4. **HR Analysis** - Zone bar displays if HR data exists
-5. **Splits Table** - Fastest/slowest highlighting with "Best" tag
-6. **Comparison** - Shows delta vs last similar workout (if exists)
-7. **PB Gap** - Shows gap to personal best (if not a PB)
-8. **Social** - Reactions and comments display
-
-### Test Scenarios
-- Workout with full data (all fields populated)
-- Workout with minimal data (just distance/time)
-- Workout that is a PB
-- Workout with intervals
-- Workout with HR data
+- **Authorization Callback Domain:** `utx-production.up.railway.app`
 
 ---
 
-## Build 28 - Bug Fixes & Visual Polish ✅
+## Club Join Request System (Build 28)
 
-**Status:** Submitted to TestFlight
-**Build ID:** `9ed4d251-7b62-49b1-a7c2-13c8aaebe59a`
+Implemented dual-flow club joining:
+- **Invite codes** - Instant join with code
+- **Request to join** - Admin approval workflow
 
-### Bug Fixes
-1. **Workout Detail "Invalid Date"** - Fixed `formatDate()` to handle null/undefined dates
-2. **Strava Button Removed** - Workouts auto-sync when Strava is connected
-3. **Comments Keyboard** - Fixed keyboard covering input field
+| Endpoint | Description |
+|----------|-------------|
+| `POST /clubs/:id/request` | Submit join request |
+| `GET /clubs/:id/requests` | Get pending requests (admin) |
+| `POST /clubs/:id/requests/:requestId/approve` | Approve request |
+| `POST /clubs/:id/requests/:requestId/reject` | Reject request |
+| `DELETE /clubs/:id/requests/:requestId` | Cancel own request |
+| `GET /clubs/my-requests` | Get user's pending requests |
 
 ---
 
-## Previous Builds
+## Workout Detail Screen Redesign (Build 28)
 
-### Build 27
-- Full light mode redesign
-- Petrol Blue (#0D4F4F) as primary color
-- All emojis replaced with Ionicons
-
-### Build 25
-- v3 design with orange primary color
-- Bug fixes
+Whoop/Strava-inspired design with:
+- Hero section with large split time
+- Effort Ring (circular gauge 0-10)
+- HR Zone breakdown bar
+- Comparison vs last similar workout
+- PB gap indicator
+- AI coaching insights
 
 ---
 
