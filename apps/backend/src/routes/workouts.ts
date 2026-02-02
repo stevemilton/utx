@@ -1,9 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { WorkoutType, PbCategory } from '@prisma/client';
 import OpenAI from 'openai';
-import { calculateEffortScore } from '../utils/effortScore.js';
+import { calculateEffortScore, calculateUtxEffortScore, type UserProfile, type Interval } from '../utils/effortScore.js';
 import { generateCoachingInsight } from '../utils/aiCoaching.js';
-import { autoSyncToStrava } from '../utils/stravaSync.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -100,10 +99,42 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       // Get user for effort score calculation and AI coaching
       const user = await server.prisma.user.findUnique({
         where: { id: userId },
-        select: { maxHr: true, heightCm: true, weightKg: true, birthDate: true, gender: true },
+        select: { maxHr: true, restingHr: true, heightCm: true, weightKg: true, birthDate: true, gender: true },
       });
 
-      // Calculate effort score using the utility
+      // Calculate age from birthDate
+      const age = user?.birthDate
+        ? Math.floor((Date.now() - new Date(user.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        : 30;
+
+      // Build user profile for UTx effort calculation
+      const userProfile: UserProfile = {
+        age,
+        weightKg: user?.weightKg || 75,
+        heightCm: user?.heightCm || 175,
+        maxHr: user?.maxHr || 190,
+        restingHr: user?.restingHr || 50,
+      };
+
+      // Build intervals array for effort calculation
+      const intervals: Interval[] = data.intervals
+        ? (data.intervals as any[]).map((i: any) => ({
+            distanceMetres: i.distanceMetres || i.distance || 0,
+            timeSeconds: i.timeSeconds || i.time || 0,
+            avgHeartRate: i.heartRate || i.avgHeartRate,
+            strokeRate: i.strokeRate || i.rate,
+          }))
+        : [{
+            distanceMetres: data.totalDistanceMetres,
+            timeSeconds: data.totalTimeSeconds,
+            avgHeartRate: data.avgHeartRate,
+            strokeRate: data.avgStrokeRate,
+          }];
+
+      // Calculate UTx Effort Score (0-100 EP)
+      const utxResult = calculateUtxEffortScore(userProfile, intervals);
+
+      // Also calculate legacy effort score (0-10) for backward compatibility
       const effortScore = user?.maxHr
         ? calculateEffortScore({
             avgHeartRate: data.avgHeartRate,
@@ -137,7 +168,10 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
           dragFactor: data.dragFactor,
           intervals: data.intervals as any,
           hrData: data.hrData as any,
-          effortScore,
+          effortScore, // Legacy 0-10 scale
+          effortPoints: utxResult.effortPoints, // New UTx 0-100 scale
+          effortZone: utxResult.zone, // recovery | building | training | peak
+          effortBreakdown: utxResult.breakdown as any, // { cardiacLoad, workOutput, pacing, economy }
           notes: data.notes,
           workoutDate: data.workoutDate ? new Date(data.workoutDate) : new Date(),
         },
@@ -161,14 +195,6 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
           server.log.error(err, 'Failed to generate AI coaching insight');
         });
       }
-
-      // Auto-sync to Strava if enabled (async, non-blocking)
-      autoSyncToStrava(server.prisma, workout, {
-        info: (msg: string) => server.log.info(msg),
-        error: (err: any, msg: string) => server.log.error(err, msg),
-      }).catch(err => {
-        server.log.error(err, 'Failed to auto-sync workout to Strava');
-      });
 
       return reply.status(201).send({
         success: true,

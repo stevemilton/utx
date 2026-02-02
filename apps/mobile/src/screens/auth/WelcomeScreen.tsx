@@ -20,7 +20,7 @@ export const WelcomeScreen: React.FC = () => {
         </View>
 
         {/* Tagline */}
-        <Text style={styles.tagline}>Every metre counts</Text>
+        <Text style={styles.tagline}>Every ERG Counts</Text>
 
         {/* Description */}
         <Text style={styles.description}>
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 36,
     fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
+    color: colors.white,
   },
   tagline: {
     fontSize: fontSize.xxl,

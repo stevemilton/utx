@@ -292,10 +292,11 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
           <TouchableOpacity
-            style={styles.searchButton}
+            style={styles.findAthletesButton}
             onPress={() => navigation.navigate('AthleteSearch' as never)}
           >
-            <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
+            <Ionicons name="person-add-outline" size={18} color={colors.primary} />
+            <Text style={styles.findAthletesText}>Find Athletes</Text>
           </TouchableOpacity>
         </View>
 
@@ -471,22 +472,22 @@ export const ProfileScreen: React.FC = () => {
             <SettingRow
               iconName="help-circle-outline"
               title="Help & FAQ"
-              onPress={() => Linking.openURL('https://utx.app/help')}
+              onPress={() => {}}
             />
             <SettingRow
               iconName="chatbubble-outline"
               title="Contact Support"
-              onPress={() => Linking.openURL('mailto:support@utx.app')}
+              onPress={() => {}}
             />
             <SettingRow
               iconName="lock-closed-outline"
               title="Privacy Policy"
-              onPress={() => Linking.openURL('https://utx.app/privacy')}
+              onPress={() => {}}
             />
             <SettingRow
               iconName="document-text-outline"
               title="Terms of Service"
-              onPress={() => Linking.openURL('https://utx.app/terms')}
+              onPress={() => {}}
             />
           </View>
         </View>
@@ -509,7 +510,23 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.appInfo}>
           <Text style={styles.appName}>UTx</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
-          <Text style={styles.tagline}>Every metre counts.</Text>
+          <Text style={styles.tagline}>Every ERG Counts</Text>
+
+          {/* Social Links */}
+          <View style={styles.socialLinks}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => {}}>
+              <Ionicons name="logo-twitter" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={() => {}}>
+              <Ionicons name="logo-instagram" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={() => {}}>
+              <Ionicons name="logo-tiktok" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={() => {}}>
+              <Ionicons name="logo-youtube" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -592,13 +609,19 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.backgroundTertiary,
+  findAthletesButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.primarySubtle,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+  },
+  findAthletesText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
   profileCard: {
     marginHorizontal: spacing.lg,
@@ -879,6 +902,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     fontStyle: 'italic',
+  },
+  socialLinks: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  socialButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Modal styles
   modalContainer: {

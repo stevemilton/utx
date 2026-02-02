@@ -88,6 +88,9 @@ export const TutorialScreen: React.FC = () => {
       if (onboardingData.maxHr > 0) {
         profileUpdates.maxHr = onboardingData.maxHr;
       }
+      if (onboardingData.restingHr && onboardingData.restingHr > 0) {
+        profileUpdates.restingHr = onboardingData.restingHr;
+      }
       profileUpdates.hasCompletedOnboarding = true;
 
       // Upload avatar if provided during onboarding
@@ -115,6 +118,7 @@ export const TutorialScreen: React.FC = () => {
           birthDate: onboardingData.birthDate || undefined,
           gender: onboardingData.gender || undefined,
           maxHr: onboardingData.maxHr || undefined,
+          restingHr: onboardingData.restingHr || undefined,
           avatarUrl: avatarUrl,
         });
 

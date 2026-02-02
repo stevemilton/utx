@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { api } from '../../services/api';
@@ -19,6 +21,7 @@ interface Club {
   name: string;
   location?: string;
   memberCount: number;
+  verified?: boolean;
 }
 
 export const JoinClubScreen: React.FC = () => {
@@ -27,6 +30,7 @@ export const JoinClubScreen: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Club[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -57,14 +61,45 @@ export const JoinClubScreen: React.FC = () => {
   const handleJoinClub = async () => {
     if (!selectedClub) return;
 
-    // TODO: Implement join club flow
-    // After joining, navigate to tutorial
-    navigation.navigate('Tutorial');
+    try {
+      setIsRequesting(true);
+      const response = await api.requestToJoinClub(selectedClub.id);
+
+      if (response.success) {
+        Alert.alert(
+          'Request Sent! 🎉',
+          `Your request to join ${selectedClub.name} has been submitted. You'll be notified when approved.`,
+          [{ text: 'Continue', onPress: () => navigation.navigate('Tutorial') }]
+        );
+      } else {
+        // Handle case where already a member or already has pending request
+        if (response.error?.includes('already a member')) {
+          Alert.alert('Already a Member', `You're already a member of ${selectedClub.name}!`, [
+            { text: 'Continue', onPress: () => navigation.navigate('Tutorial') }
+          ]);
+        } else if (response.error?.includes('pending')) {
+          Alert.alert('Request Pending', `You already have a pending request for ${selectedClub.name}.`, [
+            { text: 'Continue', onPress: () => navigation.navigate('Tutorial') }
+          ]);
+        } else {
+          Alert.alert('Error', response.error || 'Failed to submit request');
+        }
+      }
+    } catch (error) {
+      console.error('Join request error:', error);
+      Alert.alert('Error', 'Failed to submit request. Please try again.');
+    } finally {
+      setIsRequesting(false);
+    }
   };
 
   const handleCreateClub = () => {
-    // TODO: Implement create club flow
-    navigation.navigate('Tutorial');
+    // For MVP, just show an info message and skip
+    Alert.alert(
+      'Create a Club',
+      'Club creation is available after you complete setup. You can create or join a club later from your profile.',
+      [{ text: 'OK', onPress: () => navigation.navigate('Tutorial') }]
+    );
   };
 
   const handleSkip = () => {
@@ -80,7 +115,12 @@ export const JoinClubScreen: React.FC = () => {
         <Text style={styles.clubIconText}>{item.name.charAt(0)}</Text>
       </View>
       <View style={styles.clubInfo}>
-        <Text style={styles.clubName}>{item.name}</Text>
+        <View style={styles.clubNameRow}>
+          <Text style={styles.clubName}>{item.name}</Text>
+          {item.verified && (
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginLeft: 4 }} />
+          )}
+        </View>
         {item.location && <Text style={styles.clubLocation}>{item.location}</Text>}
         <Text style={styles.clubMembers}>{item.memberCount} members</Text>
       </View>
@@ -151,13 +191,19 @@ export const JoinClubScreen: React.FC = () => {
       {/* Actions */}
       <View style={styles.actions}>
         {selectedClub ? (
-          <Button
-            title={`Join ${selectedClub.name}`}
-            onPress={handleJoinClub}
-            variant="primary"
-            size="lg"
-            fullWidth
-          />
+          <>
+            <Button
+              title={isRequesting ? 'Requesting...' : `Request to Join ${selectedClub.name}`}
+              onPress={handleJoinClub}
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={isRequesting}
+            />
+            <Text style={styles.requestNote}>
+              An admin will review your request
+            </Text>
+          </>
         ) : (
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
             <Text style={styles.skipText}>Skip for now</Text>
@@ -245,6 +291,10 @@ const styles = StyleSheet.create({
   clubInfo: {
     flex: 1,
   },
+  clubNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   clubName: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
@@ -307,6 +357,12 @@ const styles = StyleSheet.create({
   },
   actions: {
     paddingTop: spacing.md,
+  },
+  requestNote: {
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   skipButton: {
     alignItems: 'center',

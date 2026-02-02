@@ -153,7 +153,7 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
         </View>
         <View style={styles.metricDivider} />
         <View style={styles.metricItem}>
-          <Text style={styles.metricValue}>{workout.avgSpm || '—'}</Text>
+          <Text style={styles.metricValue}>{workout.averageRate || '—'}</Text>
           <Text style={styles.metricLabel}>SPM</Text>
         </View>
         <View style={styles.metricDivider} />

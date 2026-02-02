@@ -49,6 +49,15 @@ export interface Workout {
   maxHeartRate?: number;
   dragFactor?: number;
   effortScore?: number;
+  effortPoints?: number;
+  effortZone?: string;
+  effortBreakdown?: {
+    cardiacLoad: number;
+    workOutput: number;
+    pacing: number;
+    economy: number;
+  };
+  isPublic?: boolean;
   intervals?: WorkoutInterval[];
   hrData?: HrDataPoint[];
   photoUrl?: string;

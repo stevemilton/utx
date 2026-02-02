@@ -62,7 +62,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? colors.textPrimary : colors.primary}
+          color={variant === 'primary' ? colors.white : colors.primary}
           size={size === 'sm' ? 'small' : 'small'}
         />
       ) : (
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   text_primary: {
-    color: colors.textPrimary,
+    color: colors.white,
   },
   text_secondary: {
     color: colors.textPrimary,

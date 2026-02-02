@@ -25,10 +25,10 @@ model User {
   birthDate            DateTime?
   gender               Gender?
   maxHr                Int                 @default(0)
+  restingHr            Int?                              // Optional, defaults to 50 if not provided
   hasCompletedOnboarding Boolean           @default(false)
   isPublic             Boolean             @default(true)
   stravaConnected      Boolean             @default(false)
-  stravaAutoSync       Boolean             @default(true)  // Auto-push workouts to Strava
   stravaRefreshToken   String?
   stravaAccessToken    String?
   stravaTokenExpiresAt DateTime?
@@ -39,6 +39,7 @@ model User {
   workouts             Workout[]
   clubMemberships      ClubMembership[]
   squadMemberships     SquadMembership[]
+  clubJoinRequests     ClubJoinRequest[]
   following            Follow[]            @relation("follower")
   followers            Follow[]            @relation("following")
   personalBests        PersonalBest[]
@@ -69,7 +70,10 @@ model Workout {
   avgHeartRate        Int?
   maxHeartRate        Int?
   dragFactor          Int?
-  effortScore         Float?              // 0-10
+  effortScore         Float?              // 0-10 (legacy)
+  effortPoints        Float?              // 0-100 (UTx algorithm)
+  effortZone          String?             // recovery | building | training | peak
+  effortBreakdown     Json?               // { cardiacLoad, workOutput, pacing, economy }
   intervals           Json?               // WorkoutInterval[]
   hrData              Json?               // HrDataPoint[]
   photoUrl            String?
@@ -119,8 +123,9 @@ model Club {
   createdAt  DateTime         @default(now())
 
   // Relations
-  memberships ClubMembership[]
-  squads      Squad[]
+  memberships  ClubMembership[]
+  squads       Squad[]
+  joinRequests ClubJoinRequest[]
 
   @@map("clubs")
 }
@@ -245,4 +250,30 @@ model WorkoutComment {
 
   @@index([workoutId])
   @@map("workout_comments")
+}
+
+// Club join request (for approval-based joining)
+model ClubJoinRequest {
+  id              String            @id @default(cuid())
+  clubId          String
+  club            Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          JoinRequestStatus @default(pending)
+  message         String?           // Optional message from requester
+  requestedAt     DateTime          @default(now())
+  reviewedBy      String?           // User ID of admin who reviewed
+  reviewedAt      DateTime?
+  rejectionReason String?
+
+  @@unique([clubId, userId])
+  @@index([clubId, status])
+  @@map("club_join_requests")
+}
+
+enum JoinRequestStatus {
+  pending
+  approved
+  rejected
+  cancelled
 }

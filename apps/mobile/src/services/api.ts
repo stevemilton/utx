@@ -97,6 +97,7 @@ class ApiService {
     birthDate: string;
     gender: string;
     maxHr: number;
+    restingHr?: number; // Optional, improves effort score accuracy
   }) {
     return this.request(ENDPOINTS.auth.register, {
       method: 'POST',
@@ -135,6 +136,10 @@ class ApiService {
 
   async getUserFollowing(userId: string) {
     return this.request(ENDPOINTS.social.following(userId));
+  }
+
+  async searchUsers(query: string) {
+    return this.request(`${ENDPOINTS.users.search}?q=${encodeURIComponent(query)}`);
   }
 
   async uploadAvatar(imageUri: string) {
@@ -324,6 +329,41 @@ class ApiService {
     return this.request(ENDPOINTS.squads.create(clubId), {
       method: 'POST',
       body: data,
+    });
+  }
+
+  // Club Join Request endpoints
+  async requestToJoinClub(clubId: string, message?: string) {
+    return this.request<{ requestId: string }>(`/clubs/${clubId}/request`, {
+      method: 'POST',
+      body: message ? { message } : undefined,
+    });
+  }
+
+  async getMyJoinRequests() {
+    return this.request('/clubs/my-requests');
+  }
+
+  async getClubJoinRequests(clubId: string) {
+    return this.request(`/clubs/${clubId}/requests`);
+  }
+
+  async approveJoinRequest(clubId: string, requestId: string) {
+    return this.request(`/clubs/${clubId}/requests/${requestId}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  async rejectJoinRequest(clubId: string, requestId: string, reason?: string) {
+    return this.request(`/clubs/${clubId}/requests/${requestId}/reject`, {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
+    });
+  }
+
+  async cancelJoinRequest(clubId: string, requestId: string) {
+    return this.request(`/clubs/${clubId}/requests/${requestId}`, {
+      method: 'DELETE',
     });
   }
 

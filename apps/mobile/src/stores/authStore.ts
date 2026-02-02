@@ -12,6 +12,7 @@ export interface UserProfile {
   birthDate: string;
   gender: 'male' | 'female' | 'prefer_not_to_say';
   maxHr: number;
+  restingHr?: number; // Optional, defaults to 50 if not provided
   stravaConnected: boolean;
   isPublic: boolean;
 }

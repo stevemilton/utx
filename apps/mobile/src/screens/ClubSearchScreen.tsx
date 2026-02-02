@@ -7,6 +7,8 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -20,6 +22,7 @@ interface Club {
   name: string;
   location?: string;
   memberCount: number;
+  verified?: boolean;
 }
 
 export const ClubSearchScreen: React.FC = () => {
@@ -28,7 +31,9 @@ export const ClubSearchScreen: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Club[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
-  const [isJoining, setIsJoining] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [requestMessage, setRequestMessage] = useState('');
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -56,25 +61,38 @@ export const ClubSearchScreen: React.FC = () => {
     setSelectedClub(club);
   };
 
-  const handleJoinClub = async () => {
+  const handleRequestToJoin = () => {
+    if (!selectedClub) return;
+    setShowMessageModal(true);
+  };
+
+  const handleSubmitRequest = async () => {
     if (!selectedClub) return;
 
     try {
-      setIsJoining(true);
-      const response = await api.joinClub(selectedClub.id);
+      setIsRequesting(true);
+      setShowMessageModal(false);
+
+      const response = await api.requestToJoinClub(
+        selectedClub.id,
+        requestMessage.trim() || undefined
+      );
 
       if (response.success) {
-        Alert.alert('Success', `You've joined ${selectedClub.name}!`, [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        Alert.alert(
+          'Request Sent! 🎉',
+          `Your request to join ${selectedClub.name} has been submitted. You'll be notified when an admin approves your request.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
       } else {
-        Alert.alert('Error', response.error || 'Failed to join club');
+        Alert.alert('Error', response.error || 'Failed to submit request');
       }
     } catch (error) {
-      console.error('Join club error:', error);
-      Alert.alert('Error', 'Failed to join club. Please try again.');
+      console.error('Join request error:', error);
+      Alert.alert('Error', 'Failed to submit request. Please try again.');
     } finally {
-      setIsJoining(false);
+      setIsRequesting(false);
+      setRequestMessage('');
     }
   };
 
@@ -87,7 +105,12 @@ export const ClubSearchScreen: React.FC = () => {
         <Text style={styles.clubIconText}>{item.name.charAt(0)}</Text>
       </View>
       <View style={styles.clubInfo}>
-        <Text style={styles.clubName}>{item.name}</Text>
+        <View style={styles.clubNameRow}>
+          <Text style={styles.clubName}>{item.name}</Text>
+          {item.verified && (
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginLeft: 4 }} />
+          )}
+        </View>
         {item.location && <Text style={styles.clubLocation}>{item.location}</Text>}
         <Text style={styles.clubMembers}>{item.memberCount} members</Text>
       </View>
@@ -112,7 +135,7 @@ export const ClubSearchScreen: React.FC = () => {
 
       <View style={styles.content}>
         <Text style={styles.subtitle}>
-          Search for your rowing club to join and see squad workouts
+          Search for your rowing club to request membership
         </Text>
 
         {/* Search */}
@@ -152,19 +175,73 @@ export const ClubSearchScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Join button */}
+      {/* Request button */}
       {selectedClub && (
         <View style={styles.actions}>
           <Button
-            title={isJoining ? 'Joining...' : `Join ${selectedClub.name}`}
-            onPress={handleJoinClub}
+            title={isRequesting ? 'Requesting...' : `Request to Join ${selectedClub.name}`}
+            onPress={handleRequestToJoin}
             variant="primary"
             size="lg"
             fullWidth
-            disabled={isJoining}
+            disabled={isRequesting}
           />
+          <Text style={styles.requestNote}>
+            An admin will review your request
+          </Text>
         </View>
       )}
+
+      {/* Message Modal */}
+      <Modal
+        visible={showMessageModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMessageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Request to Join</Text>
+            <Text style={styles.modalSubtitle}>
+              Add an optional message to introduce yourself to the club admin
+            </Text>
+
+            <TextInput
+              style={styles.messageInput}
+              placeholder="e.g., I row at this club on Tuesday evenings..."
+              placeholderTextColor={colors.textTertiary}
+              value={requestMessage}
+              onChangeText={setRequestMessage}
+              multiline
+              numberOfLines={3}
+              maxLength={200}
+            />
+
+            <Text style={styles.charCount}>
+              {requestMessage.length}/200
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowMessageModal(false);
+                  setRequestMessage('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalSubmitButton}
+                onPress={handleSubmitRequest}
+              >
+                <Text style={styles.modalSubmitText}>Send Request</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -213,7 +290,7 @@ const styles = StyleSheet.create({
   },
   clubItemSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryDark + '10',
+    backgroundColor: colors.primarySubtle,
   },
   clubIcon: {
     width: 48,
@@ -231,6 +308,10 @@ const styles = StyleSheet.create({
   },
   clubInfo: {
     flex: 1,
+  },
+  clubNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   clubName: {
     fontSize: fontSize.md,
@@ -297,5 +378,82 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  requestNote: {
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    lineHeight: 20,
+  },
+  messageInput: {
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  charCount: {
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  modalCancelText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  modalSubmitButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+  },
+  modalSubmitText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textInverse,
   },
 });

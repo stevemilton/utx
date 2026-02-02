@@ -142,14 +142,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 20,
     height: 3,
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.white,
     borderRadius: 2,
   },
   addIconVertical: {
     position: 'absolute',
     width: 3,
     height: 20,
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.white,
     borderRadius: 2,
   },
 });

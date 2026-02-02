@@ -8,6 +8,7 @@ interface UpdateProfileBody {
   birthDate?: string;
   gender?: 'male' | 'female' | 'prefer_not_to_say';
   maxHr?: number;
+  restingHr?: number; // Optional, improves effort score accuracy
   hasCompletedOnboarding?: boolean;
   isPublic?: boolean;
 }
@@ -65,7 +66,7 @@ export async function usersRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Body: UpdateProfileBody }>, reply: FastifyReply) => {
       const userId = request.authUser!.id;
-      const { username, name, heightCm, weightKg, birthDate, gender, maxHr, hasCompletedOnboarding } = request.body;
+      const { username, name, heightCm, weightKg, birthDate, gender, maxHr, restingHr, hasCompletedOnboarding } = request.body;
 
       // Build update data object with only provided fields
       const updateData: Record<string, unknown> = {};
@@ -110,6 +111,7 @@ export async function usersRoutes(server: FastifyInstance): Promise<void> {
       if (birthDate !== undefined) updateData.birthDate = new Date(birthDate);
       if (gender !== undefined) updateData.gender = gender;
       if (maxHr !== undefined) updateData.maxHr = maxHr;
+      if (restingHr !== undefined) updateData.restingHr = restingHr;
       if (hasCompletedOnboarding !== undefined) updateData.hasCompletedOnboarding = hasCompletedOnboarding;
       if (request.body.isPublic !== undefined) updateData.isPublic = request.body.isPublic;
 

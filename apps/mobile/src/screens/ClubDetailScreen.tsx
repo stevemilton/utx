@@ -30,6 +30,13 @@ interface ClubMember {
   totalMeters: number;
 }
 
+interface JoinRequest {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  requestedAt: string;
+  rejectionReason?: string;
+}
+
 interface Club {
   id: string;
   name: string;
@@ -42,6 +49,9 @@ interface Club {
   topMembers: ClubMember[];
   isOwner: boolean;
   isMember: boolean;
+  userRole?: 'admin' | 'member';
+  pendingRequestCount?: number;
+  userJoinRequest?: JoinRequest;
 }
 
 export const ClubDetailScreen: React.FC = () => {
@@ -77,19 +87,67 @@ export const ClubDetailScreen: React.FC = () => {
     fetchClub();
   };
 
-  const handleJoin = async () => {
+  const handleRequestToJoin = async () => {
     setActionLoading(true);
     try {
-      const response = await api.joinClub(clubId);
+      const response = await api.requestToJoinClub(clubId);
       if (response.success) {
-        setClub((prev) => prev ? { ...prev, isMember: true, memberCount: prev.memberCount + 1 } : null);
+        Alert.alert(
+          'Request Sent! 🎉',
+          'Your request has been submitted. You\'ll be notified when an admin approves it.',
+        );
+        // Update local state to show pending request
+        setClub((prev) => prev ? {
+          ...prev,
+          userJoinRequest: {
+            id: response.data?.requestId || '',
+            status: 'pending',
+            requestedAt: new Date().toISOString()
+          }
+        } : null);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to send request');
       }
     } catch (error) {
-      console.error('Error joining club:', error);
-      Alert.alert('Error', 'Failed to join club');
+      console.error('Error requesting to join:', error);
+      Alert.alert('Error', 'Failed to send request');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!club?.userJoinRequest) return;
+
+    Alert.alert(
+      'Cancel Request',
+      'Are you sure you want to cancel your join request?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              const response = await api.cancelJoinRequest(clubId, club.userJoinRequest!.id);
+              if (response.success) {
+                setClub((prev) => prev ? { ...prev, userJoinRequest: undefined } : null);
+              }
+            } catch (error) {
+              console.error('Error cancelling request:', error);
+              Alert.alert('Error', 'Failed to cancel request');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const navigateToJoinRequests = () => {
+    navigation.navigate('ClubJoinRequests', { clubId, clubName: club?.name || 'Club' });
   };
 
   const handleLeave = async () => {
@@ -201,29 +259,92 @@ export const ClubDetailScreen: React.FC = () => {
           )}
         </View>
 
+        {/* Admin: Pending Requests Badge */}
+        {club.userRole === 'admin' && club.pendingRequestCount && club.pendingRequestCount > 0 && (
+          <TouchableOpacity
+            style={styles.pendingRequestsBanner}
+            onPress={navigateToJoinRequests}
+          >
+            <View style={styles.pendingRequestsLeft}>
+              <Ionicons name="people" size={20} color={colors.warning} />
+              <Text style={styles.pendingRequestsText}>
+                {club.pendingRequestCount} pending join request{club.pendingRequestCount > 1 ? 's' : ''}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
+
         {/* Join/Leave Button */}
         {!club.isOwner && (
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              club.isMember && styles.leaveButton,
-            ]}
-            onPress={club.isMember ? handleLeave : handleJoin}
-            disabled={actionLoading}
-          >
-            {actionLoading ? (
-              <ActivityIndicator size="small" color={club.isMember ? colors.error : colors.white} />
-            ) : (
-              <Text
-                style={[
-                  styles.actionButtonText,
-                  club.isMember && styles.leaveButtonText,
-                ]}
+          club.isMember ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.leaveButton]}
+              onPress={handleLeave}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator size="small" color={colors.error} />
+              ) : (
+                <Text style={[styles.actionButtonText, styles.leaveButtonText]}>
+                  Leave Club
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : club.userJoinRequest?.status === 'pending' ? (
+            <View style={styles.pendingRequestContainer}>
+              <View style={styles.pendingBadge}>
+                <Ionicons name="time-outline" size={16} color={colors.warning} />
+                <Text style={styles.pendingBadgeText}>Request Pending</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.cancelRequestButton}
+                onPress={handleCancelRequest}
+                disabled={actionLoading}
               >
-                {club.isMember ? 'Leave Club' : 'Join Club'}
-              </Text>
-            )}
-          </TouchableOpacity>
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                ) : (
+                  <Text style={styles.cancelRequestText}>Cancel Request</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : club.userJoinRequest?.status === 'rejected' ? (
+            <View style={styles.rejectedContainer}>
+              <View style={styles.rejectedBadge}>
+                <Ionicons name="close-circle-outline" size={16} color={colors.error} />
+                <Text style={styles.rejectedBadgeText}>Request Rejected</Text>
+              </View>
+              {club.userJoinRequest.rejectionReason && (
+                <Text style={styles.rejectionReason}>
+                  "{club.userJoinRequest.rejectionReason}"
+                </Text>
+              )}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleRequestToJoin}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={styles.actionButtonText}>Request Again</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleRequestToJoin}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.actionButtonText}>Request to Join</Text>
+              )}
+            </TouchableOpacity>
+          )
         )}
 
         {/* Stats */}
@@ -244,7 +365,7 @@ export const ClubDetailScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Invite Code */}
+        {/* Invite Code & Admin Actions */}
         {club.isMember && (
           <View style={styles.inviteSection}>
             <Text style={styles.sectionTitle}>Invite Code</Text>
@@ -254,6 +375,26 @@ export const ClubDetailScreen: React.FC = () => {
                 <Text style={styles.copyButtonText}>Copy</Text>
               </TouchableOpacity>
             </View>
+            <Text style={styles.inviteHint}>
+              Share this code with athletes to let them join instantly
+            </Text>
+
+            {/* Admin: Manage Requests Link */}
+            {club.userRole === 'admin' && (
+              <TouchableOpacity
+                style={styles.manageRequestsButton}
+                onPress={navigateToJoinRequests}
+              >
+                <Ionicons name="people-outline" size={18} color={colors.primary} />
+                <Text style={styles.manageRequestsText}>Manage Join Requests</Text>
+                {club.pendingRequestCount && club.pendingRequestCount > 0 && (
+                  <View style={styles.requestCountBadge}>
+                    <Text style={styles.requestCountText}>{club.pendingRequestCount}</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -405,6 +546,80 @@ const styles = StyleSheet.create({
   leaveButtonText: {
     color: colors.error,
   },
+  pendingRequestsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.warning + '15',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
+  },
+  pendingRequestsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  pendingRequestsText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  pendingRequestContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.warning + '15',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+  },
+  pendingBadgeText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.warning,
+  },
+  cancelRequestButton: {
+    paddingVertical: spacing.xs,
+  },
+  cancelRequestText: {
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    textDecorationLine: 'underline',
+  },
+  rejectedContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  rejectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.error + '15',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+  },
+  rejectedBadgeText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.error,
+  },
+  rejectionReason: {
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+  },
   statsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
@@ -457,6 +672,40 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
+  },
+  inviteHint: {
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
+  },
+  manageRequestsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primarySubtle,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  manageRequestsText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  requestCountBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  requestCountText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.white,
   },
   section: {
     marginBottom: spacing.lg,

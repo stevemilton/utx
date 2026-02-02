@@ -13,6 +13,7 @@ export interface OnboardingData {
 
   // HR setup screen
   maxHr: number;
+  restingHr?: number; // Optional, improves effort score accuracy
 }
 
 interface OnboardingState {
@@ -27,6 +28,8 @@ interface OnboardingState {
     gender: 'male' | 'female' | 'prefer_not_to_say';
   }) => void;
   setMaxHr: (maxHr: number) => void;
+  setRestingHr: (restingHr: number | undefined) => void;
+  setHrData: (maxHr: number, restingHr?: number) => void;
   reset: () => void;
   getData: () => OnboardingData;
 }
@@ -57,6 +60,16 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   setMaxHr: (maxHr) =>
     set((state) => ({
       data: { ...state.data, maxHr },
+    })),
+
+  setRestingHr: (restingHr) =>
+    set((state) => ({
+      data: { ...state.data, restingHr },
+    })),
+
+  setHrData: (maxHr, restingHr) =>
+    set((state) => ({
+      data: { ...state.data, maxHr, restingHr },
     })),
 
   reset: () => set({ data: { ...initialData } }),

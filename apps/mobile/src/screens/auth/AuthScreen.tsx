@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
@@ -12,6 +13,9 @@ import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../services/api';
 import { firebaseAuth } from '../../services/firebase';
 import type { AuthScreenProps } from '../../navigation/types';
+
+// Check if running in development mode (Expo Go or dev client)
+const isDev = __DEV__;
 
 // Required for expo-auth-session
 WebBrowser.maybeCompleteAuthSession();
@@ -135,6 +139,29 @@ export const AuthScreen: React.FC = () => {
 
   // Phone auth is disabled in Expo managed workflow - see CLAUDE.md
 
+  // Dev-only login for Simulator testing
+  const handleDevLogin = async () => {
+    if (!isDev) return;
+
+    const devUser = {
+      id: 'dev-user-001',
+      name: 'Dev User',
+      username: 'devuser',
+      avatarUrl: undefined,
+      heightCm: 185,
+      weightKg: 85,
+      birthDate: '1990-01-01',
+      gender: 'male' as const,
+      maxHr: 185,
+      stravaConnected: false,
+      isPublic: true,
+    };
+
+    // Login with mock data - skip backend in dev
+    login(devUser, 'dev-token-12345');
+    setHasCompletedOnboarding(true); // Skip onboarding for faster dev testing
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -207,6 +234,19 @@ export const AuthScreen: React.FC = () => {
               Continue with Phone
             </Text>
           </TouchableOpacity>
+
+          {/* Dev Login - Only visible in development mode */}
+          {isDev && (
+            <TouchableOpacity
+              style={[styles.socialButton, styles.devButton]}
+              onPress={handleDevLogin}
+            >
+              <View style={styles.devIconContainer}>
+                <Ionicons name="code-slash" size={18} color={colors.white} />
+              </View>
+              <Text style={styles.devButtonText}>Dev Login (Simulator)</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Terms */}
@@ -315,5 +355,23 @@ const styles = StyleSheet.create({
   link: {
     color: colors.primary,
     textDecorationLine: 'underline',
+  },
+  devButton: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    marginTop: spacing.lg,
+  },
+  devIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  devButtonText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.white,
   },
 });

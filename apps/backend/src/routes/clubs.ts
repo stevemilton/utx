@@ -84,6 +84,37 @@ export async function clubsRoutes(fastify: FastifyInstance) {
     }
 
     const userMembership = club.memberships[0];
+    const isAdmin = userMembership?.role === 'admin';
+
+    // Get pending request count for admins
+    let pendingRequestCount = 0;
+    if (isAdmin) {
+      pendingRequestCount = await prisma.clubJoinRequest.count({
+        where: {
+          clubId: id,
+          status: 'pending',
+        },
+      });
+    }
+
+    // Get user's pending join request if they're not a member
+    let userJoinRequest = null;
+    if (!userMembership) {
+      const request = await prisma.clubJoinRequest.findUnique({
+        where: {
+          clubId_userId: { clubId: id, userId },
+        },
+        select: {
+          id: true,
+          status: true,
+          requestedAt: true,
+          rejectionReason: true,
+        },
+      });
+      if (request) {
+        userJoinRequest = request;
+      }
+    }
 
     return {
       success: true,
@@ -100,6 +131,8 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         })),
         userRole: userMembership?.role || null,
         isMember: !!userMembership,
+        pendingRequestCount: isAdmin ? pendingRequestCount : undefined,
+        userJoinRequest,
       },
     };
   });
@@ -467,6 +500,386 @@ export async function clubsRoutes(fastify: FastifyInstance) {
           joinedAt: m.joinedAt,
         })),
       },
+    };
+  });
+
+  // ============================================
+  // JOIN REQUEST ENDPOINTS
+  // ============================================
+
+  // Get user's pending join requests
+  fastify.get('/my-requests', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = (request as any).userId;
+
+    const requests = await prisma.clubJoinRequest.findMany({
+      where: { userId },
+      include: {
+        club: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            verified: true,
+            _count: { select: { memberships: true } },
+          },
+        },
+      },
+      orderBy: { requestedAt: 'desc' },
+    });
+
+    return {
+      success: true,
+      data: requests.map(r => ({
+        id: r.id,
+        clubId: r.clubId,
+        clubName: r.club.name,
+        clubLocation: r.club.location,
+        clubVerified: r.club.verified,
+        clubMemberCount: r.club._count.memberships,
+        status: r.status,
+        message: r.message,
+        requestedAt: r.requestedAt,
+        reviewedAt: r.reviewedAt,
+        rejectionReason: r.rejectionReason,
+      })),
+    };
+  });
+
+  // Request to join a club
+  fastify.post<{
+    Params: { id: string };
+    Body: { message?: string };
+  }>('/:id/request', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = (request as any).userId;
+    const { id: clubId } = request.params;
+    const { message } = request.body || {};
+
+    // Check club exists
+    const club = await prisma.club.findUnique({
+      where: { id: clubId },
+    });
+
+    if (!club) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Club not found',
+      });
+    }
+
+    // Check if already a member
+    const existingMembership = await prisma.clubMembership.findUnique({
+      where: {
+        clubId_userId: { clubId, userId },
+      },
+    });
+
+    if (existingMembership) {
+      return reply.status(409).send({
+        success: false,
+        error: 'You are already a member of this club',
+      });
+    }
+
+    // Check for existing pending request
+    const existingRequest = await prisma.clubJoinRequest.findUnique({
+      where: {
+        clubId_userId: { clubId, userId },
+      },
+    });
+
+    if (existingRequest) {
+      if (existingRequest.status === 'pending') {
+        return reply.status(409).send({
+          success: false,
+          error: 'You already have a pending request for this club',
+        });
+      }
+      if (existingRequest.status === 'rejected') {
+        // Allow re-requesting after rejection - update the existing request
+        const updatedRequest = await prisma.clubJoinRequest.update({
+          where: { id: existingRequest.id },
+          data: {
+            status: 'pending',
+            message: message?.trim() || null,
+            requestedAt: new Date(),
+            reviewedBy: null,
+            reviewedAt: null,
+            rejectionReason: null,
+          },
+        });
+
+        return {
+          success: true,
+          data: {
+            requestId: updatedRequest.id,
+            clubId: club.id,
+            clubName: club.name,
+            status: 'pending',
+          },
+          message: 'Join request submitted. You will be notified when approved.',
+        };
+      }
+    }
+
+    // Create new request
+    const joinRequest = await prisma.clubJoinRequest.create({
+      data: {
+        clubId,
+        userId,
+        message: message?.trim() || null,
+        status: 'pending',
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        requestId: joinRequest.id,
+        clubId: club.id,
+        clubName: club.name,
+        status: 'pending',
+      },
+      message: 'Join request submitted. You will be notified when approved.',
+    };
+  });
+
+  // Get pending requests for a club (admin only)
+  fastify.get<{ Params: { id: string } }>('/:id/requests', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = (request as any).userId;
+    const { id: clubId } = request.params;
+
+    // Check admin permission
+    const membership = await prisma.clubMembership.findUnique({
+      where: {
+        clubId_userId: { clubId, userId },
+      },
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can view join requests',
+      });
+    }
+
+    const requests = await prisma.clubJoinRequest.findMany({
+      where: {
+        clubId,
+        status: 'pending',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { requestedAt: 'asc' },
+    });
+
+    return {
+      success: true,
+      data: requests.map(r => ({
+        id: r.id,
+        userId: r.userId,
+        userName: r.user.name,
+        userAvatar: r.user.avatarUrl,
+        message: r.message,
+        requestedAt: r.requestedAt,
+      })),
+    };
+  });
+
+  // Approve a join request (admin only)
+  fastify.post<{
+    Params: { id: string; requestId: string };
+  }>('/:id/requests/:requestId/approve', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const adminUserId = (request as any).userId;
+    const { id: clubId, requestId } = request.params;
+
+    // Check admin permission
+    const membership = await prisma.clubMembership.findUnique({
+      where: {
+        clubId_userId: { clubId, userId: adminUserId },
+      },
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can approve join requests',
+      });
+    }
+
+    // Get the request
+    const joinRequest = await prisma.clubJoinRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        user: { select: { id: true, name: true } },
+        club: { select: { name: true } },
+      },
+    });
+
+    if (!joinRequest || joinRequest.clubId !== clubId) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Join request not found',
+      });
+    }
+
+    if (joinRequest.status !== 'pending') {
+      return reply.status(400).send({
+        success: false,
+        error: `Request is already ${joinRequest.status}`,
+      });
+    }
+
+    // Use transaction to update request and create membership
+    await prisma.$transaction([
+      prisma.clubJoinRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'approved',
+          reviewedBy: adminUserId,
+          reviewedAt: new Date(),
+        },
+      }),
+      prisma.clubMembership.create({
+        data: {
+          clubId,
+          userId: joinRequest.userId,
+          role: 'member',
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: `${joinRequest.user.name} has been added to ${joinRequest.club.name}`,
+      data: {
+        userId: joinRequest.userId,
+        userName: joinRequest.user.name,
+      },
+    };
+  });
+
+  // Reject a join request (admin only)
+  fastify.post<{
+    Params: { id: string; requestId: string };
+    Body: { reason?: string };
+  }>('/:id/requests/:requestId/reject', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const adminUserId = (request as any).userId;
+    const { id: clubId, requestId } = request.params;
+    const { reason } = request.body || {};
+
+    // Check admin permission
+    const membership = await prisma.clubMembership.findUnique({
+      where: {
+        clubId_userId: { clubId, userId: adminUserId },
+      },
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can reject join requests',
+      });
+    }
+
+    // Get the request
+    const joinRequest = await prisma.clubJoinRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        user: { select: { name: true } },
+      },
+    });
+
+    if (!joinRequest || joinRequest.clubId !== clubId) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Join request not found',
+      });
+    }
+
+    if (joinRequest.status !== 'pending') {
+      return reply.status(400).send({
+        success: false,
+        error: `Request is already ${joinRequest.status}`,
+      });
+    }
+
+    await prisma.clubJoinRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'rejected',
+        reviewedBy: adminUserId,
+        reviewedAt: new Date(),
+        rejectionReason: reason?.trim() || null,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Join request from ${joinRequest.user.name} has been rejected`,
+    };
+  });
+
+  // Cancel own join request
+  fastify.delete<{
+    Params: { id: string; requestId: string };
+  }>('/:id/requests/:requestId', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = (request as any).userId;
+    const { id: clubId, requestId } = request.params;
+
+    const joinRequest = await prisma.clubJoinRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!joinRequest || joinRequest.clubId !== clubId) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Join request not found',
+      });
+    }
+
+    if (joinRequest.userId !== userId) {
+      return reply.status(403).send({
+        success: false,
+        error: 'You can only cancel your own requests',
+      });
+    }
+
+    if (joinRequest.status !== 'pending') {
+      return reply.status(400).send({
+        success: false,
+        error: `Cannot cancel a ${joinRequest.status} request`,
+      });
+    }
+
+    await prisma.clubJoinRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'cancelled',
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Join request cancelled',
     };
   });
 }

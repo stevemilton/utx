@@ -13,6 +13,7 @@ interface RegisterBody {
   birthDate: string;
   gender: 'male' | 'female' | 'prefer_not_to_say' | '';
   maxHr: number;
+  restingHr?: number; // Optional, defaults to 50 if not provided
   avatarUrl?: string;
 }
 
@@ -109,7 +110,7 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   server.post<{ Body: RegisterBody }>(
     '/register',
     async (request: FastifyRequest<{ Body: RegisterBody }>, reply: FastifyReply) => {
-      const { firebaseToken, provider, name, email, heightCm, weightKg, birthDate, gender, maxHr, avatarUrl } = request.body;
+      const { firebaseToken, provider, name, email, heightCm, weightKg, birthDate, gender, maxHr, restingHr, avatarUrl } = request.body;
 
       try {
         let providerUid: string;
@@ -178,6 +179,7 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
           heightCm: heightCm || 0,
           weightKg: weightKg || 0,
           maxHr: maxHr || 0,
+          restingHr: restingHr || null, // Optional, can be set during onboarding
           avatarUrl: avatarUrl || verifiedPicture,
         };
 

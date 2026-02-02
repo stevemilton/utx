@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -32,11 +33,28 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
 };
 
-// Helper to parse MM:SS.S to seconds
+// Helper to parse MM:SS.S or M.SS.S to seconds
+// Accepts both 1:51.9 (colon) and 1.51.9 (dots) formats
 const parseTime = (timeStr: string): number | null => {
-  const match = timeStr.match(/^(\d+):(\d+\.?\d*)$/);
-  if (!match) return null;
-  return parseInt(match[1]) * 60 + parseFloat(match[2]);
+  // Try colon format first: M:SS.S or MM:SS.S
+  const colonMatch = timeStr.match(/^(\d+):(\d+\.?\d*)$/);
+  if (colonMatch) {
+    return parseInt(colonMatch[1]) * 60 + parseFloat(colonMatch[2]);
+  }
+
+  // Try dot format: M.SS.S (e.g., 1.51.9 means 1 min 51.9 sec)
+  const dotMatch = timeStr.match(/^(\d+)\.(\d{2})\.(\d+)$/);
+  if (dotMatch) {
+    return parseInt(dotMatch[1]) * 60 + parseInt(dotMatch[2]) + parseFloat('0.' + dotMatch[3]);
+  }
+
+  // Try simple dot format: M.SS (e.g., 7.23 means 7 min 23 sec)
+  const simpleDotMatch = timeStr.match(/^(\d+)\.(\d{2})$/);
+  if (simpleDotMatch) {
+    return parseInt(simpleDotMatch[1]) * 60 + parseInt(simpleDotMatch[2]);
+  }
+
+  return null;
 };
 
 export const AddWorkoutScreen: React.FC = () => {
@@ -67,6 +85,7 @@ export const AddWorkoutScreen: React.FC = () => {
   const [calories, setCalories] = useState(ocrData?.calories?.toString() || '');
   const [dragFactor, setDragFactor] = useState(ocrData?.dragFactor?.toString() || '');
   const [notes, setNotes] = useState('');
+  const [isPublic, setIsPublic] = useState(false); // Default to private
 
   const handleTakePhoto = () => {
     navigation.navigate('Camera');
@@ -184,8 +203,45 @@ export const AddWorkoutScreen: React.FC = () => {
         dragFactor: dragFactor ? parseInt(dragFactor, 10) : undefined,
         photoUrl,
         notes: notes || undefined,
-        isPublic: true,
+        isPublic,
       };
+
+      // In dev mode, skip API and save locally for testing
+      if (__DEV__) {
+        const mockWorkout = {
+          id: `dev-workout-${Date.now()}`,
+          userId: 'dev-user-001',
+          workoutType,
+          totalTimeSeconds: timeSeconds,
+          totalDistanceMetres: distanceMetres,
+          averageSplitSeconds: splitSeconds || (timeSeconds / distanceMetres) * 500,
+          averageRate: strokeRate ? parseInt(strokeRate, 10) : 0,
+          averageWatts: watts ? parseInt(watts, 10) : undefined,
+          avgHeartRate: heartRate ? parseInt(heartRate, 10) : undefined,
+          calories: calories ? parseInt(calories, 10) : undefined,
+          dragFactor: dragFactor ? parseInt(dragFactor, 10) : undefined,
+          photoUrl,
+          notes: notes || undefined,
+          isPublic,
+          isPb: false,
+          workoutDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        };
+
+        addWorkout(mockWorkout);
+
+        Alert.alert('Success', 'Workout saved! (Dev mode - local only)', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowForm(false);
+              setSelectedImage(null);
+              navigation.navigate('Workouts');
+            },
+          },
+        ]);
+        return;
+      }
 
       const response = await api.createWorkout(workoutData);
 
@@ -386,6 +442,35 @@ export const AddWorkoutScreen: React.FC = () => {
                 />
               </View>
 
+              {/* Privacy Toggle */}
+              <View style={styles.privacySection}>
+                <View style={styles.privacyRow}>
+                  <View style={styles.privacyIconContainer}>
+                    <Ionicons
+                      name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
+                      size={20}
+                      color={isPublic ? colors.primary : colors.textSecondary}
+                    />
+                  </View>
+                  <View style={styles.privacyContent}>
+                    <Text style={styles.privacyTitle}>
+                      {isPublic ? 'Public' : 'Private'}
+                    </Text>
+                    <Text style={styles.privacyDescription}>
+                      {isPublic
+                        ? 'Visible on the public feed and leaderboards'
+                        : 'Only visible on your personal workouts list'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={isPublic}
+                    onValueChange={setIsPublic}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.white}
+                  />
+                </View>
+              </View>
+
               {/* Save Button */}
               <Button
                 title={isSaving ? 'Saving...' : 'Save Workout'}
@@ -419,19 +504,6 @@ export const AddWorkoutScreen: React.FC = () => {
       ) : (
         <View style={styles.content}>
           {/* Photo options */}
-          <TouchableOpacity style={styles.option} onPress={handleTakePhoto}>
-            <View style={styles.optionIcon}>
-              <Ionicons name="camera" size={28} color={colors.primary} />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>Take Photo</Text>
-              <Text style={styles.optionDescription}>
-                Snap your erg screen and we'll extract the data
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.option} onPress={handleChooseFromGallery}>
             <View style={styles.optionIcon}>
               <Ionicons name="images" size={28} color={colors.primary} />
@@ -440,6 +512,19 @@ export const AddWorkoutScreen: React.FC = () => {
               <Text style={styles.optionTitle}>Choose from Gallery</Text>
               <Text style={styles.optionDescription}>
                 Upload a photo from your camera roll
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.option} onPress={handleTakePhoto}>
+            <View style={styles.optionIcon}>
+              <Ionicons name="camera" size={28} color={colors.primary} />
+            </View>
+            <View style={styles.optionContent}>
+              <Text style={styles.optionTitle}>Take Photo</Text>
+              <Text style={styles.optionDescription}>
+                Snap your erg screen and we'll extract the data
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
@@ -672,5 +757,40 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: spacing.lg,
+  },
+  // Privacy toggle styles
+  privacySection: {
+    marginBottom: spacing.lg,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  privacyIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  privacyContent: {
+    flex: 1,
+  },
+  privacyTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  privacyDescription: {
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
 });

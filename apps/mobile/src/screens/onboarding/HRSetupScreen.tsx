@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useOnboardingStore } from '../../stores/onboardingStore';
@@ -9,9 +10,11 @@ import type { OnboardingScreenProps } from '../../navigation/types';
 
 export const HRSetupScreen: React.FC = () => {
   const navigation = useNavigation<OnboardingScreenProps<'HRSetup'>['navigation']>();
-  const { setMaxHr, data: onboardingData } = useOnboardingStore();
+  const { setHrData, data: onboardingData } = useOnboardingStore();
   const [knowsMaxHR, setKnowsMaxHR] = useState<boolean | null>(null);
   const [maxHR, setMaxHR] = useState('');
+  const [restingHR, setRestingHR] = useState('');
+  const [showRestingHr, setShowRestingHr] = useState(false);
 
   // Calculate estimated max HR from birth date
   const calculateEstimatedMaxHR = () => {
@@ -28,8 +31,9 @@ export const HRSetupScreen: React.FC = () => {
 
   const handleContinue = () => {
     const finalMaxHR = knowsMaxHR && maxHR ? parseInt(maxHR) : estimatedMaxHR;
+    const finalRestingHR = restingHR ? parseInt(restingHR) : undefined;
     // Save to onboarding store
-    setMaxHr(finalMaxHR);
+    setHrData(finalMaxHR, finalRestingHR);
     navigation.navigate('JoinClub');
   };
 
@@ -56,8 +60,8 @@ export const HRSetupScreen: React.FC = () => {
           <View style={styles.content}>
             <Text style={styles.title}>Heart rate setup</Text>
             <Text style={styles.subtitle}>
-              Knowing your max heart rate helps us calculate accurate HR zones and
-              effort scores
+              Your heart rate data helps us calculate accurate effort scores using
+              the UTx algorithm
             </Text>
 
             <Text style={styles.question}>Do you know your maximum heart rate?</Text>
@@ -134,6 +138,57 @@ export const HRSetupScreen: React.FC = () => {
                   Based on your age. This will automatically adjust if we see higher
                   readings during your workouts.
                 </Text>
+              </View>
+            )}
+
+            {/* Resting HR Section (Optional) */}
+            {knowsMaxHR !== null && (
+              <View style={styles.restingHrSection}>
+                <TouchableOpacity
+                  style={styles.optionalHeader}
+                  onPress={() => setShowRestingHr(!showRestingHr)}
+                >
+                  <View style={styles.optionalHeaderContent}>
+                    <Ionicons
+                      name="heart-outline"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.optionalTitle}>
+                      Add Resting Heart Rate (Optional)
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={showRestingHr ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={colors.textTertiary}
+                  />
+                </TouchableOpacity>
+
+                {showRestingHr && (
+                  <View style={styles.restingHrContent}>
+                    <Input
+                      label="Resting Heart Rate"
+                      placeholder="e.g., 52"
+                      value={restingHR}
+                      onChangeText={setRestingHR}
+                      keyboardType="numeric"
+                      helper="bpm"
+                    />
+                    <View style={styles.restingHrInfo}>
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={16}
+                        color={colors.textTertiary}
+                      />
+                      <Text style={styles.restingHrInfoText}>
+                        Measured first thing in the morning while still in bed.
+                        Improves effort score accuracy using the Karvonen method.
+                        Default: 50 bpm if not provided.
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -289,6 +344,48 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // Resting HR Section
+  restingHrSection: {
+    marginTop: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+  },
+  optionalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  optionalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  optionalTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.textPrimary,
+  },
+  restingHrContent: {
+    padding: spacing.md,
+    paddingTop: 0,
+  },
+  restingHrInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: borderRadius.md,
+  },
+  restingHrInfoText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
+    lineHeight: 18,
   },
   actions: {
     paddingTop: spacing.md,

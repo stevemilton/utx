@@ -64,6 +64,7 @@ export type RootStackParamList = {
   Comments: { workoutId: string };
   UserProfile: { userId: string };
   ClubDetail: { clubId: string };
+  ClubJoinRequests: { clubId: string; clubName: string };
   SquadDetail: { squadId: string };
   EditProfile: undefined;
   PBHistory: { category: string };
