@@ -1,124 +1,136 @@
 # UTx Development Status
 
-**Last Updated:** 1 February 2026, 9:30 PM
-**Current Build:** 18 (building on EAS, auto-submitting to TestFlight)
-**Branch:** `mystifying-keller` (merged to `main`)
+**Last Updated:** 2 February 2026, 4:30 PM
+**Current Build:** 28 (in TestFlight)
+**Branch:** `ecstatic-satoshi`
 
 ---
 
-## What Was Done Today
+## Latest Session Changes (Pending Build 30)
 
-### Bug Fixes
-- ✅ Fixed `formatTime` null check crash in WorkoutsScreen
-- ✅ Fixed OCR timeout (increased from 30s to 60s for GPT-4o Vision)
-- ✅ Added better error messages for OCR failures (timeout, network)
-- ✅ Fixed date picker visibility on onboarding (added `themeVariant="dark"`)
+### P0 Fix: Workout Detail Screen Complete Redesign
 
-### New Features
-- ✅ **Username/Nickname** - Users can set @username for discovery
-  - Backend: `username` field in Prisma schema (unique, optional)
-  - Backend: Validation (3-20 chars, lowercase alphanumeric + underscore)
-  - Backend: Search by name OR username in `/users/search`
-  - Mobile: EditProfileScreen with username field
-  - Mobile: AthleteSearchScreen displays usernames
+**Critical Bug Fixed:** Data not showing on Workout Detail screen (all metrics showed dashes)
+- Root cause: Frontend expected `response.data` to be the workout, but backend returned `response.data.workout`
+- Fix: Updated data extraction in `WorkoutDetailScreen.tsx`
 
-- ✅ **Profile Privacy** - Public/private toggle
-  - Backend: `isPublic` field in Prisma schema (default: true)
-  - Backend: Search only returns public profiles
-  - Mobile: Toggle in Settings > Privacy section
+### New Whoop/Strava-Inspired Workout Detail Screen
 
-- ✅ **Athlete Search** - Find and follow other rowers
-  - New `AthleteSearchScreen.tsx`
-  - Search by name or @username
-  - Follow/unfollow with optimistic updates
-  - Shows workout count, follower count
+| Section | Description |
+|---------|-------------|
+| **Hero Section** | Large split time display (/500m), workout type badge, PB badge, date |
+| **Quick Stats Row** | Floating card with Distance, Time, SPM, Watts |
+| **Effort Ring** | Whoop-style circular gauge (0-10) with color coding and contextual labels |
+| **HR Analysis** | Avg/Max BPM + zone distribution bar (Z1-Z5) |
+| **Splits Table** | Enhanced with pace highlighting (fastest=green, slowest=amber, "Best" tag) |
+| **Comparison Section** | vs Last Similar Workout with deltas (time, split, HR, effort) |
+| **PB Gap Card** | Shows gap to personal best when not a PB |
+| **Social Section** | Reactions with avatars, comments preview |
+| **AI Coaching** | Styled insight card with sparkles icon |
+| **Notes & Photo** | User notes and original erg screen photo |
 
-- ✅ **Edit Profile Screen** - Full profile editing
-  - New `EditProfileScreen.tsx`
-  - Change avatar (camera or gallery)
-  - Edit name, username, height, weight, max HR
+### New Components Created
 
-- ✅ **Settings Reorganized**
-  - Added Privacy section with public profile toggle
-  - Added Social section with "Find Athletes"
-  - Added Club section with "Change Club"
-  - Icons throughout using @expo/vector-icons
+| Component | File | Description |
+|-----------|------|-------------|
+| **EffortRing** | `components/EffortRing.tsx` | Circular SVG gauge, color transitions, contextual labels |
+| **ZoneBar** | `components/ZoneBar.tsx` | HR zone distribution bar with legend |
+| **ComparisonCard** | `components/ComparisonCard.tsx` | Metric comparison with delta indicators |
 
-- ✅ **Tab Bar Icons** - Added Ionicons to bottom navigation
+### Backend Enhancements
 
-### Files Created
-- `apps/mobile/src/screens/AthleteSearchScreen.tsx`
-- `apps/mobile/src/screens/EditProfileScreen.tsx`
-- `apps/mobile/src/screens/ClubSearchScreen.tsx`
+Enhanced `GET /workouts/:workoutId` response now includes:
+
+```typescript
+{
+  workout: Workout,
+  comparison: {
+    lastSimilar: { id, date, totalTimeSeconds, averageSplitSeconds, avgHeartRate, effortScore },
+    personalBest: { timeSeconds, achievedAt }
+  },
+  hrZoneBreakdown: { zone1Seconds, zone2Seconds, zone3Seconds, zone4Seconds, zone5Seconds }
+}
+```
+
+### Theme Update
+
+Aligned with `loving-visvesvaraya` branch:
+- Light mode with Petrol Blue (#0D4F4F) as primary
+- White backgrounds, dark text
+- Enhanced shadows for card definition
 
 ### Files Modified
-- `apps/backend/prisma/schema.prisma` - Added `username`, `isPublic`
-- `apps/backend/src/routes/users.ts` - Username validation, search by username
-- `apps/mobile/src/stores/authStore.ts` - Added `username`, `isPublic` to UserProfile
-- `apps/mobile/src/services/api.ts` - Added timeout option, 60s OCR timeout
-- `apps/mobile/src/screens/SettingsScreen.tsx` - New sections
-- `apps/mobile/src/screens/CameraScreen.tsx` - Better error handling
-- `apps/mobile/src/screens/main/WorkoutsScreen.tsx` - formatTime null fix
-- `apps/mobile/src/navigation/*` - Registered new screens
+
+| File | Changes |
+|------|---------|
+| `WorkoutDetailScreen.tsx` | Complete redesign with all new sections |
+| `workouts.ts` (backend) | Added comparison data and HR zone calculation |
+| `workoutStore.ts` | Added types for reactions, comments, user |
+| `theme.ts` | Light mode design system |
+| `components/index.ts` | Export new components |
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `components/EffortRing.tsx` | Whoop-style effort gauge |
+| `components/ZoneBar.tsx` | HR zone distribution |
+| `components/ComparisonCard.tsx` | Performance comparison display |
 
 ---
 
-## Current State
+## What to Test in Build 30
 
-### Deployment
-- **GitHub:** Code pushed to `main`
-- **Railway:** Backend deployed with new schema (username, isPublic fields migrated)
-- **EAS/TestFlight:** Build 18 in progress, will auto-submit
+### Workout Detail Screen (P0)
+1. **Data displays correctly** - Distance, Time, Split, Rate should show actual values
+2. **Hero split time** - Large split time with /500m label
+3. **Effort Ring** - Circular gauge with score and label (if effort score exists)
+4. **HR Analysis** - Zone bar displays if HR data exists
+5. **Splits Table** - Fastest/slowest highlighting with "Best" tag
+6. **Comparison** - Shows delta vs last similar workout (if exists)
+7. **PB Gap** - Shows gap to personal best (if not a PB)
+8. **Social** - Reactions and comments display
 
-### What to Test When Build 18 Arrives
-1. Sign in with Apple/Google
-2. Complete onboarding (check date picker is visible)
-3. Go to Settings > Edit Profile - test username field
-4. Go to Settings > Privacy - toggle public/private
-5. Go to Settings > Social > Find Athletes - search and follow
-6. Add Workout > Take Photo - test OCR (should have 60s timeout now)
-7. Check all tab icons display correctly
-
----
-
-## MVP Checklist (from PRD)
-
-### ✅ Must Have (Launch) - DONE
-- [x] Photo capture and AI data extraction (OCR)
-- [x] Training log with workout history
-- [x] Workout Report with HR analysis
-- [x] Effort Score calculation
-- [x] PB tracking and notifications
-- [x] AI coaching insights (post-workout)
-- [x] User profiles with physical stats
-- [x] Firebase auth (Apple, Google)
-- [x] Strava export
-- [x] Clubs and Squads with roles (data model)
-- [x] Squad feed
-- [x] Basic leaderboards
-
-### ⚠️ Should Have (Fast Follow) - PARTIAL
-- [x] Following/followers and social feed
-- [x] Reactions and comments (backend done)
-- [x] Username for discovery
-- [x] Profile privacy toggle
-- [ ] Club-wide feed opt-in
-- [ ] Weekly trend insights from AI
-- [ ] Push notifications
-
-### ❌ Known Issues
-- **Phone auth disabled** - Expo managed workflow limitation, users must use Apple/Google
-- **OCR needs real-world testing** - Increased timeout, but need to verify accuracy
-- **Club join flow** - ClubSearchScreen exists but needs polish
+### Test Scenarios
+- Workout with full data (all fields populated)
+- Workout with minimal data (just distance/time)
+- Workout that is a PB
+- Workout with intervals
+- Workout with HR data
 
 ---
 
-## Next Session Priorities
+## Build 28 - Bug Fixes & Visual Polish ✅
 
-1. **Test Build 18** - Verify all new features work on device
-2. **Fix any bugs found** in testing
-3. **Polish Club flow** - ClubSearchScreen needs work
-4. **Consider:** Reactions/comments UI on feed cards
+**Status:** Submitted to TestFlight
+**Build ID:** `9ed4d251-7b62-49b1-a7c2-13c8aaebe59a`
+
+### Bug Fixes
+1. **Workout Detail "Invalid Date"** - Fixed `formatDate()` to handle null/undefined dates
+2. **Strava Button Removed** - Workouts auto-sync when Strava is connected
+3. **Comments Keyboard** - Fixed keyboard covering input field
+
+---
+
+## Previous Builds
+
+### Build 27
+- Full light mode redesign
+- Petrol Blue (#0D4F4F) as primary color
+- All emojis replaced with Ionicons
+
+### Build 25
+- v3 design with orange primary color
+- Bug fixes
+
+---
+
+## Known Issues
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| OCR via Camera timeout | Needs investigation | Gallery works, camera may send larger images |
+| Phone auth | Disabled | Expo managed workflow limitation - use Apple/Google |
 
 ---
 
@@ -126,33 +138,24 @@
 
 ```bash
 # Navigate to project
-cd /Users/stevemilton/.claude-worktrees/utx/mystifying-keller
+cd /Users/stevemilton/.claude-worktrees/utx/ecstatic-satoshi
 
-# Check build status
-cd apps/mobile && eas build:list --limit 1
+# Run iOS Simulator
+cd apps/mobile && npx expo start
 
 # Run new build
 cd apps/mobile && eas build --platform ios --profile production --auto-submit
 
-# Check Railway logs
-# (use Railway dashboard)
+# Test backend health
+curl https://utx-production.up.railway.app/health
 
-# TypeScript check
-cd apps/mobile && npx tsc --noEmit
-cd apps/backend && npx tsc --noEmit
+# Check build status
+cd apps/mobile && eas build:list --limit 1
 ```
 
 ---
 
-## Key Files Reference
+## Links
 
-| Purpose | File |
-|---------|------|
-| PRD (source of truth) | `UTx PRD v2.pdf` |
-| Backend routes | `apps/backend/src/routes/*.ts` |
-| Prisma schema | `apps/backend/prisma/schema.prisma` |
-| Mobile screens | `apps/mobile/src/screens/*.tsx` |
-| Navigation | `apps/mobile/src/navigation/` |
-| Auth store | `apps/mobile/src/stores/authStore.ts` |
-| API service | `apps/mobile/src/services/api.ts` |
-| Theme | `apps/mobile/src/constants/theme.ts` |
+- **TestFlight:** https://appstoreconnect.apple.com/apps/6758580968/testflight/ios
+- **EAS Dashboard:** https://expo.dev/accounts/stevemilton/projects/utx/builds

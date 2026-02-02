@@ -39,7 +39,7 @@ module.exports = {
     },
     web: {
       bundler: 'metro',
-      output: 'static',
+      output: 'single',
       favicon: './assets/favicon.png',
     },
     plugins: [
