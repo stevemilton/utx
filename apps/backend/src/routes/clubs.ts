@@ -54,7 +54,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const { id } = request.params;
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
 
     const club = await prisma.club.findUnique({
       where: { id },
@@ -143,7 +143,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { name, location } = request.body;
 
     if (!name || name.trim().length < 2) {
@@ -209,7 +209,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/join', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { inviteCode } = request.body;
 
     const club = await prisma.club.findUnique({
@@ -262,7 +262,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   fastify.post<{ Params: { id: string } }>('/:id/leave', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { id } = request.params;
 
     const membership = await prisma.clubMembership.findUnique({
@@ -306,7 +306,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/:id/squads', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { id: clubId } = request.params;
     const { name } = request.body;
 
@@ -374,7 +374,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/squads/join', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { inviteCode } = request.body;
 
     const squad = await prisma.squad.findUnique({
@@ -451,7 +451,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   fastify.get('/my', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
 
     const clubMemberships = await prisma.clubMembership.findMany({
       where: { userId },
@@ -511,7 +511,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   fastify.get('/my-requests', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
 
     const requests = await prisma.clubJoinRequest.findMany({
       where: { userId },
@@ -554,7 +554,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/:id/request', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { id: clubId } = request.params;
     const { message } = request.body || {};
 
@@ -651,7 +651,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>('/:id/requests', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { id: clubId } = request.params;
 
     // Check admin permission
@@ -704,7 +704,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/:id/requests/:requestId/approve', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const adminUserId = (request as any).userId;
+    const adminUserId = request.authUser!.id;
     const { id: clubId, requestId } = request.params;
 
     // Check admin permission
@@ -780,7 +780,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/:id/requests/:requestId/reject', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const adminUserId = (request as any).userId;
+    const adminUserId = request.authUser!.id;
     const { id: clubId, requestId } = request.params;
     const { reason } = request.body || {};
 
@@ -842,7 +842,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }>('/:id/requests/:requestId', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { id: clubId, requestId } = request.params;
 
     const joinRequest = await prisma.clubJoinRequest.findUnique({

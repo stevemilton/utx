@@ -96,6 +96,42 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       const userId = request.authUser!.id;
       const data = request.body;
 
+      // Input validation
+      if (!data.totalTimeSeconds || data.totalTimeSeconds <= 0 || data.totalTimeSeconds > 86400) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid total time (must be between 1 second and 24 hours)',
+        });
+      }
+
+      if (!data.totalDistanceMetres || data.totalDistanceMetres <= 0 || data.totalDistanceMetres > 100000) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid distance (must be between 1m and 100km)',
+        });
+      }
+
+      if (data.avgStrokeRate && (data.avgStrokeRate < 10 || data.avgStrokeRate > 60)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid stroke rate (must be between 10 and 60 SPM)',
+        });
+      }
+
+      if (data.avgHeartRate && (data.avgHeartRate < 30 || data.avgHeartRate > 250)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid heart rate (must be between 30 and 250 BPM)',
+        });
+      }
+
+      if (data.maxHeartRate && (data.maxHeartRate < 30 || data.maxHeartRate > 250)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid max heart rate (must be between 30 and 250 BPM)',
+        });
+      }
+
       // Get user for effort score calculation and AI coaching
       const user = await server.prisma.user.findUnique({
         where: { id: userId },
@@ -576,6 +612,29 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       const { workoutId } = request.params;
       const { content } = request.body;
       const userId = request.authUser!.id;
+
+      // Input validation
+      if (!content || typeof content !== 'string') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Comment content is required',
+        });
+      }
+
+      const trimmedContent = content.trim();
+      if (trimmedContent.length === 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Comment cannot be empty',
+        });
+      }
+
+      if (trimmedContent.length > 1000) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Comment cannot exceed 1000 characters',
+        });
+      }
 
       const comment = await server.prisma.workoutComment.create({
         data: {

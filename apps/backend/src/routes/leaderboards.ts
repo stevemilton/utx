@@ -16,7 +16,7 @@ export async function leaderboardsRoutes(fastify: FastifyInstance) {
   }>('/global', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const {
       metric = 'distance',
       period = 'month',
@@ -188,7 +188,7 @@ export async function leaderboardsRoutes(fastify: FastifyInstance) {
   }>('/club/:clubId', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { clubId } = request.params;
     const { metric = 'distance', period = 'month' } = request.query;
 
@@ -281,7 +281,7 @@ export async function leaderboardsRoutes(fastify: FastifyInstance) {
   }>('/squad/:squadId', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { squadId } = request.params;
     const { metric = 'distance', period = 'month' } = request.query;
 

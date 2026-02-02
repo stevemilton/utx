@@ -40,7 +40,7 @@ export async function stravaRoutes(fastify: FastifyInstance) {
       });
     }
 
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
 
     const authUrl = new URL('https://www.strava.com/oauth/authorize');
@@ -64,7 +64,7 @@ export async function stravaRoutes(fastify: FastifyInstance) {
   }>('/callback', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { code } = request.body;
 
     if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
@@ -126,7 +126,7 @@ export async function stravaRoutes(fastify: FastifyInstance) {
   fastify.post('/disconnect', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
 
     await prisma.user.update({
       where: { id: userId },
@@ -150,7 +150,7 @@ export async function stravaRoutes(fastify: FastifyInstance) {
   }>('/sync/:workoutId', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { workoutId } = request.params;
 
     // Get user with Strava tokens
@@ -252,7 +252,7 @@ export async function stravaRoutes(fastify: FastifyInstance) {
   fastify.get('/status', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -274,7 +274,7 @@ export async function stravaRoutes(fastify: FastifyInstance) {
   }>('/settings', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { autoSync } = request.body;
 
     await prisma.user.update({

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { createJSONStorage, persist, StateStorage } from 'zustand/middleware';
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface UserProfile {
@@ -36,6 +37,60 @@ interface AuthState {
   updateProfile: (updates: Partial<UserProfile>) => void;
 }
 
+// Secure storage adapter for sensitive data (token)
+// Uses SecureStore for the token, AsyncStorage for non-sensitive data
+const secureStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      // Get the main state from AsyncStorage
+      const value = await AsyncStorage.getItem(name);
+      if (!value) return null;
+
+      const state = JSON.parse(value);
+
+      // Get the token from SecureStore
+      const token = await SecureStore.getItemAsync('utx-auth-token');
+      if (token) {
+        state.state.token = token;
+      }
+
+      return JSON.stringify(state);
+    } catch (error) {
+      console.error('Error reading auth state:', error);
+      return null;
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    try {
+      const state = JSON.parse(value);
+      const token = state.state?.token;
+
+      // Store token securely in SecureStore
+      if (token) {
+        await SecureStore.setItemAsync('utx-auth-token', token);
+        // Remove token from the state that goes to AsyncStorage
+        state.state.token = null;
+      } else {
+        // Clear token from SecureStore if not present
+        await SecureStore.deleteItemAsync('utx-auth-token');
+      }
+
+      // Store non-sensitive data in AsyncStorage
+      await AsyncStorage.setItem(name, JSON.stringify(state));
+    } catch (error) {
+      console.error('Error saving auth state:', error);
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(name);
+      await SecureStore.deleteItemAsync('utx-auth-token');
+    } catch (error) {
+      console.error('Error removing auth state:', error);
+    }
+  },
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -67,13 +122,20 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         }),
 
-      logout: () =>
+      logout: async () => {
+        // Clear secure storage on logout
+        try {
+          await SecureStore.deleteItemAsync('utx-auth-token');
+        } catch (error) {
+          console.error('Error clearing secure token:', error);
+        }
         set({
           user: null,
           token: null,
           isAuthenticated: false,
           hasCompletedOnboarding: false,
-        }),
+        });
+      },
 
       updateProfile: (updates) => {
         const currentUser = get().user;
@@ -84,7 +146,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'utx-auth-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         user: state.user,
         token: state.token,

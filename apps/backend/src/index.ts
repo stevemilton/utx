@@ -52,8 +52,13 @@ server.register(multipart, {
 });
 
 // Register JWT plugin
+// SECURITY: JWT_SECRET is required - fail fast if not set
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set');
+  process.exit(1);
+}
 server.register(jwt, {
-  secret: process.env.JWT_SECRET || 'utx-development-secret-change-in-production',
+  secret: process.env.JWT_SECRET,
 });
 
 // Decorate with prisma

@@ -9,7 +9,7 @@ export async function pbsRoutes(fastify: FastifyInstance) {
   fastify.get('/', {
     preHandler: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
 
     const pbs = await prisma.personalBest.findMany({
       where: { userId },
@@ -48,7 +48,7 @@ export async function pbsRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { category: string } }>('/:category', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { category } = request.params;
 
     // Validate category
@@ -108,7 +108,7 @@ export async function pbsRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { category: string } }>('/:category/history', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const userId = (request as any).userId;
+    const userId = request.authUser!.id;
     const { category } = request.params;
 
     // Map category to workout type

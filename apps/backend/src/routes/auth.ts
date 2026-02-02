@@ -289,20 +289,34 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
       const userId = request.authUser!.id;
 
       try {
-        // Delete user and all related data (cascade)
-        await server.prisma.user.delete({
-          where: { id: userId },
-        });
-
-        // Also delete from Firebase
+        // IMPORTANT: Fetch Firebase UID BEFORE deleting from database
         const user = await server.prisma.user.findUnique({
           where: { id: userId },
           select: { firebaseUid: true },
         });
 
-        if (user) {
-          await auth.deleteUser(user.firebaseUid);
+        if (!user) {
+          return reply.status(404).send({
+            success: false,
+            error: 'User not found',
+          });
         }
+
+        // Delete from Firebase first (if this fails, DB is unchanged)
+        try {
+          await auth.deleteUser(user.firebaseUid);
+        } catch (firebaseError: any) {
+          // Only fail if it's not a "user not found" error
+          if (firebaseError.code !== 'auth/user-not-found') {
+            throw firebaseError;
+          }
+          // User doesn't exist in Firebase, continue with DB deletion
+        }
+
+        // Now delete user and all related data (cascade) from database
+        await server.prisma.user.delete({
+          where: { id: userId },
+        });
 
         return reply.send({
           success: true,
