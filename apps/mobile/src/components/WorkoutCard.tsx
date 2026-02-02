@@ -29,16 +29,19 @@ const getWorkoutTypeName = (type: string): string => {
     '1000m': '1K',
     '2000m': '2K Test',
     '5000m': '5K',
+    'five_thousand': '5K',
     '6000m': '6K',
     '10000m': '10K',
+    'ten_thousand': '10K',
     half_marathon: 'Half Marathon',
     marathon: 'Marathon',
     '1_minute': '1 Minute',
+    'one_minute': '1 Minute',
     steady_state: 'Steady State',
     intervals: 'Intervals',
     custom: 'Custom',
   };
-  return typeNames[type] || type;
+  return typeNames[type] || type.replace(/_/g, ' ');
 };
 
 // Get relative time

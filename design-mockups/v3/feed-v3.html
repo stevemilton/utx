@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390, initial-scale=1.0">
+  <title>UTx - Feed v3 (Premium)</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Refined color palette - less saturated, more premium */
+      --primary: #E85D30;
+      --primary-subtle: rgba(232, 93, 48, 0.12);
+
+      --bg: #000000;
+      --bg-elevated: #0C0C0C;
+      --surface: #161616;
+      --surface-hover: #1E1E1E;
+
+      --text-primary: #FAFAFA;
+      --text-secondary: #A0A0A0;
+      --text-tertiary: #666666;
+
+      --success: #22C55E;
+      --warning: #EAB308;
+      --error: #EF4444;
+
+      --border: rgba(255,255,255,0.08);
+      --pb-gold: #D4A418;
+    }
+
+    .light-mode {
+      --bg: #FAFAFA;
+      --bg-elevated: #FFFFFF;
+      --surface: #FFFFFF;
+      --surface-hover: #F5F5F5;
+
+      --text-primary: #0A0A0A;
+      --text-secondary: #6B6B6B;
+      --text-tertiary: #9A9A9A;
+
+      --border: rgba(0,0,0,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0A0A0A;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+      gap: 48px;
+    }
+
+    .container {
+      display: flex;
+      gap: 48px;
+    }
+
+    .phone-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mode-label {
+      color: #666;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .light-mode .phone-frame {
+      box-shadow: 0 25px 80px rgba(0,0,0,0.12);
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .status-bar {
+      height: 54px;
+      padding: 14px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 34px;
+      background: #000;
+      border-radius: 0 0 20px 20px;
+    }
+
+    .content {
+      height: calc(100% - 54px - 80px);
+      overflow-y: auto;
+      padding-bottom: 16px;
+    }
+
+    /* Header - More minimal */
+    .header {
+      padding: 4px 20px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 18px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.75;
+      fill: none;
+    }
+
+    /* Filter Pills - More refined */
+    .filters {
+      padding: 0 20px 14px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .filter-pill {
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: transparent;
+      color: var(--text-tertiary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    .filter-pill.active {
+      background: var(--text-primary);
+      color: var(--bg);
+      border-color: transparent;
+    }
+
+    .filter-pill:hover:not(.active) {
+      border-color: var(--text-tertiary);
+      color: var(--text-secondary);
+    }
+
+    /* Workout Card - Cleaner, tighter */
+    .workout-card {
+      margin: 0 16px 12px;
+      background: var(--surface);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .card-header {
+      padding: 14px 16px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .user-info {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--primary), #C44B25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      font-size: 13px;
+      color: white;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .time-ago {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 1px;
+    }
+
+    .workout-type-badge {
+      background: var(--primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.3px;
+    }
+
+    .workout-type-badge.secondary {
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+    }
+
+    /* Metrics Hero - Large split time */
+    .metrics-hero {
+      padding: 20px 16px 16px;
+      text-align: center;
+    }
+
+    .split-time {
+      font-size: 56px;
+      font-weight: 300;
+      color: var(--text-primary);
+      letter-spacing: -3px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .split-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    /* Secondary Metrics - Compact grid */
+    .metrics-secondary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .metric-item {
+      text-align: center;
+      position: relative;
+    }
+
+    .metric-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 24px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    /* Badges Row */
+    .badges-row {
+      padding: 10px 16px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .effort-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--primary-subtle);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .effort-value {
+      font-size: 13px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .effort-low { color: var(--success); }
+    .effort-medium { color: var(--warning); }
+    .effort-high { color: var(--error); }
+
+    .effort-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .pb-badge {
+      background: linear-gradient(135deg, var(--pb-gold), #B8920F);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #000;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    .pb-badge svg {
+      width: 12px;
+      height: 12px;
+      stroke: #000;
+      stroke-width: 2.5;
+    }
+
+    /* Engagement Bar */
+    .engagement {
+      display: flex;
+      padding: 10px 16px;
+      gap: 16px;
+    }
+
+    .engagement-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      font-family: inherit;
+    }
+
+    .engagement-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-tertiary);
+      stroke-width: 1.75;
+      fill: none;
+    }
+
+    .engagement-btn.active svg {
+      stroke: var(--primary);
+      fill: var(--primary);
+    }
+
+    .engagement-count {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    .engagement-btn.active .engagement-count {
+      color: var(--primary);
+    }
+
+    /* Tab Bar - Minimal */
+    .tab-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: var(--bg-elevated);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      padding-top: 10px;
+    }
+
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 2px 20px;
+    }
+
+    .tab-item svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--text-tertiary);
+      stroke-width: 1.75;
+      fill: none;
+    }
+
+    .tab-item.active svg {
+      stroke: var(--text-primary);
+    }
+
+    .tab-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    .tab-item.active .tab-label {
+      color: var(--text-primary);
+    }
+
+    /* FAB - More subtle */
+    .fab {
+      position: absolute;
+      bottom: 96px;
+      right: 16px;
+      width: 52px;
+      height: 52px;
+      border-radius: 26px;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(232, 93, 48, 0.35);
+      cursor: pointer;
+    }
+
+    .fab svg {
+      width: 24px;
+      height: 24px;
+      stroke: white;
+      stroke-width: 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Dark Mode -->
+    <div class="phone-wrapper">
+      <div class="mode-label">Dark</div>
+      <div class="phone-frame">
+        <div class="notch"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <span style="display: flex; gap: 6px; align-items: center; opacity: 0.9;">
+            <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M0 3h2v8H0V3zm4-1h2v9H4V2zm4-2h2v11H8V0zm4 3h2v8h-2V3z"/></svg>
+            <svg width="24" height="12" viewBox="0 0 24 12"><rect x="0.5" y="0.5" width="20" height="11" rx="2.5" stroke="currentColor" stroke-opacity="0.35" fill="none"/><rect x="2" y="2" width="15" height="8" rx="1.5" fill="currentColor"/><path d="M22 4v4a2 2 0 0 0 0-4z" fill="currentColor" fill-opacity="0.4"/></svg>
+          </span>
+        </div>
+
+        <div class="content">
+          <div class="header">
+            <h1>Feed</h1>
+            <div class="icon-btn">
+              <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+          </div>
+
+          <div class="filters">
+            <button class="filter-pill active">All</button>
+            <button class="filter-pill">Squad</button>
+            <button class="filter-pill">Following</button>
+          </div>
+
+          <!-- Workout Card 1 -->
+          <div class="workout-card">
+            <div class="card-header">
+              <div class="user-info">
+                <div class="avatar">JT</div>
+                <div>
+                  <div class="user-name">James Thompson</div>
+                  <div class="time-ago">2h ago</div>
+                </div>
+              </div>
+              <div class="workout-type-badge">2K TEST</div>
+            </div>
+
+            <div class="metrics-hero">
+              <div class="split-time">1:42.3</div>
+              <div class="split-label">Avg Split /500m</div>
+            </div>
+
+            <div class="metrics-secondary">
+              <div class="metric-item">
+                <div class="metric-value">2,000m</div>
+                <div class="metric-label">Dist</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">6:49</div>
+                <div class="metric-label">Time</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">32</div>
+                <div class="metric-label">SPM</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">178</div>
+                <div class="metric-label">HR</div>
+              </div>
+            </div>
+
+            <div class="badges-row">
+              <div class="effort-badge">
+                <span class="effort-value effort-high">9.2</span>
+                <span class="effort-label">Effort</span>
+              </div>
+              <div class="pb-badge">
+                <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                PB
+              </div>
+            </div>
+
+            <div class="engagement">
+              <button class="engagement-btn active">
+                <svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                <span class="engagement-count">24</span>
+              </button>
+              <button class="engagement-btn">
+                <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                <span class="engagement-count">8</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Workout Card 2 -->
+          <div class="workout-card">
+            <div class="card-header">
+              <div class="user-info">
+                <div class="avatar" style="background: linear-gradient(135deg, #4B7BE5, #2851A3);">SM</div>
+                <div>
+                  <div class="user-name">Sarah Mitchell</div>
+                  <div class="time-ago">5h ago</div>
+                </div>
+              </div>
+              <div class="workout-type-badge secondary">STEADY STATE</div>
+            </div>
+
+            <div class="metrics-hero">
+              <div class="split-time">2:05.8</div>
+              <div class="split-label">Avg Split /500m</div>
+            </div>
+
+            <div class="metrics-secondary">
+              <div class="metric-item">
+                <div class="metric-value">10,000m</div>
+                <div class="metric-label">Dist</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">41:56</div>
+                <div class="metric-label">Time</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">20</div>
+                <div class="metric-label">SPM</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">152</div>
+                <div class="metric-label">HR</div>
+              </div>
+            </div>
+
+            <div class="badges-row">
+              <div class="effort-badge">
+                <span class="effort-value effort-low">5.5</span>
+                <span class="effort-label">Effort</span>
+              </div>
+            </div>
+
+            <div class="engagement">
+              <button class="engagement-btn">
+                <svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                <span class="engagement-count">12</span>
+              </button>
+              <button class="engagement-btn">
+                <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                <span class="engagement-count">3</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAB -->
+        <div class="fab">
+          <svg viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="tab-label">Feed</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            <span class="tab-label">Workouts</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            <span class="tab-label">Leaderboard</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="tab-label">Profile</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Light Mode -->
+    <div class="phone-wrapper light-mode">
+      <div class="mode-label">Light</div>
+      <div class="phone-frame">
+        <div class="notch"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <span style="display: flex; gap: 6px; align-items: center; opacity: 0.9;">
+            <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M0 3h2v8H0V3zm4-1h2v9H4V2zm4-2h2v11H8V0zm4 3h2v8h-2V3z"/></svg>
+            <svg width="24" height="12" viewBox="0 0 24 12"><rect x="0.5" y="0.5" width="20" height="11" rx="2.5" stroke="currentColor" stroke-opacity="0.35" fill="none"/><rect x="2" y="2" width="15" height="8" rx="1.5" fill="currentColor"/><path d="M22 4v4a2 2 0 0 0 0-4z" fill="currentColor" fill-opacity="0.4"/></svg>
+          </span>
+        </div>
+
+        <div class="content">
+          <div class="header">
+            <h1>Feed</h1>
+            <div class="icon-btn">
+              <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+          </div>
+
+          <div class="filters">
+            <button class="filter-pill active">All</button>
+            <button class="filter-pill">Squad</button>
+            <button class="filter-pill">Following</button>
+          </div>
+
+          <!-- Workout Card 1 -->
+          <div class="workout-card">
+            <div class="card-header">
+              <div class="user-info">
+                <div class="avatar">JT</div>
+                <div>
+                  <div class="user-name">James Thompson</div>
+                  <div class="time-ago">2h ago</div>
+                </div>
+              </div>
+              <div class="workout-type-badge">2K TEST</div>
+            </div>
+
+            <div class="metrics-hero">
+              <div class="split-time">1:42.3</div>
+              <div class="split-label">Avg Split /500m</div>
+            </div>
+
+            <div class="metrics-secondary">
+              <div class="metric-item">
+                <div class="metric-value">2,000m</div>
+                <div class="metric-label">Dist</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">6:49</div>
+                <div class="metric-label">Time</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">32</div>
+                <div class="metric-label">SPM</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">178</div>
+                <div class="metric-label">HR</div>
+              </div>
+            </div>
+
+            <div class="badges-row">
+              <div class="effort-badge">
+                <span class="effort-value effort-high">9.2</span>
+                <span class="effort-label">Effort</span>
+              </div>
+              <div class="pb-badge">
+                <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                PB
+              </div>
+            </div>
+
+            <div class="engagement">
+              <button class="engagement-btn active">
+                <svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                <span class="engagement-count">24</span>
+              </button>
+              <button class="engagement-btn">
+                <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                <span class="engagement-count">8</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Workout Card 2 -->
+          <div class="workout-card">
+            <div class="card-header">
+              <div class="user-info">
+                <div class="avatar" style="background: linear-gradient(135deg, #4B7BE5, #2851A3);">SM</div>
+                <div>
+                  <div class="user-name">Sarah Mitchell</div>
+                  <div class="time-ago">5h ago</div>
+                </div>
+              </div>
+              <div class="workout-type-badge secondary">STEADY STATE</div>
+            </div>
+
+            <div class="metrics-hero">
+              <div class="split-time">2:05.8</div>
+              <div class="split-label">Avg Split /500m</div>
+            </div>
+
+            <div class="metrics-secondary">
+              <div class="metric-item">
+                <div class="metric-value">10,000m</div>
+                <div class="metric-label">Dist</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">41:56</div>
+                <div class="metric-label">Time</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">20</div>
+                <div class="metric-label">SPM</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-value">152</div>
+                <div class="metric-label">HR</div>
+              </div>
+            </div>
+
+            <div class="badges-row">
+              <div class="effort-badge">
+                <span class="effort-value effort-low">5.5</span>
+                <span class="effort-label">Effort</span>
+              </div>
+            </div>
+
+            <div class="engagement">
+              <button class="engagement-btn">
+                <svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                <span class="engagement-count">12</span>
+              </button>
+              <button class="engagement-btn">
+                <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                <span class="engagement-count">3</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAB -->
+        <div class="fab">
+          <svg viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="tab-label">Feed</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            <span class="tab-label">Workouts</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            <span class="tab-label">Leaderboard</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="tab-label">Profile</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -29,16 +29,25 @@ const getWorkoutTypeName = (type: string): string => {
     '1000m': '1K',
     '2000m': '2K Test',
     '5000m': '5K',
+    'five_thousand': '5K',
     '6000m': '6K',
     '10000m': '10K',
+    'ten_thousand': '10K',
     half_marathon: 'Half Marathon',
     marathon: 'Marathon',
     '1_minute': '1 Minute',
+    'one_minute': '1 Minute',
     steady_state: 'Steady State',
     intervals: 'Intervals',
     custom: 'Custom',
   };
-  return typeNames[type] || type;
+  return typeNames[type] || type.replace(/_/g, ' ');
+};
+
+// Safe number formatter
+const formatNumber = (num: number | undefined | null): string => {
+  if (num === undefined || num === null) return '—';
+  return num.toLocaleString();
 };
 
 // Get effort color
@@ -137,24 +146,24 @@ export const WorkoutDetailScreen: React.FC = () => {
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
             <Text style={styles.metricValue}>
-              {workout.totalDistanceMetres.toLocaleString()}m
+              {formatNumber(workout.totalDistanceMetres)}m
             </Text>
             <Text style={styles.metricLabel}>Total Distance</Text>
           </View>
           <View style={styles.metricCard}>
             <Text style={styles.metricValue}>
-              {formatTime(workout.totalTimeSeconds)}
+              {workout.totalTimeSeconds ? formatTime(workout.totalTimeSeconds) : '—'}
             </Text>
             <Text style={styles.metricLabel}>Total Time</Text>
           </View>
           <View style={styles.metricCard}>
             <Text style={styles.metricValue}>
-              {formatTime(workout.averageSplitSeconds)}
+              {workout.averageSplitSeconds ? formatTime(workout.averageSplitSeconds) : '—'}
             </Text>
             <Text style={styles.metricLabel}>Avg Split</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>{workout.averageRate} spm</Text>
+            <Text style={styles.metricValue}>{workout.averageRate ?? '—'} spm</Text>
             <Text style={styles.metricLabel}>Avg Rate</Text>
           </View>
         </View>
