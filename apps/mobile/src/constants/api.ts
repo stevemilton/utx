@@ -6,11 +6,13 @@ export const API_CONFIG = {
   development: {
     baseUrl: 'http://localhost:3000',
     timeout: 30000,
+    ocrTimeout: 60000, // OCR needs longer timeout for OpenAI Vision
   },
   // Production - Railway
   production: {
     baseUrl: 'https://utx-production.up.railway.app',
     timeout: 30000,
+    ocrTimeout: 60000, // OCR needs longer timeout for OpenAI Vision
   },
 };
 

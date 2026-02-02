@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import { colors, spacing, fontSize } from '../constants/theme';
 import { Button } from '../components/Button';
 import { api } from '../services/api';
@@ -71,26 +71,35 @@ export const CameraScreen: React.FC = () => {
     setIsProcessing(true);
 
     try {
+      console.log('[OCR] Starting image processing...');
+      console.log('[OCR] Photo URI:', capturedPhoto);
+
       // Read the file as base64
       const base64 = await FileSystem.readAsStringAsync(capturedPhoto, {
         encoding: 'base64',
       });
 
+      console.log('[OCR] Base64 length:', base64.length);
+      console.log('[OCR] Sending to OCR endpoint...');
+
       // Send to OCR endpoint
       const ocrResponse = await api.processOcr(base64);
 
+      console.log('[OCR] Response received:', JSON.stringify(ocrResponse, null, 2));
+
       if (ocrResponse.success && ocrResponse.data) {
+        console.log('[OCR] Success! Navigating to AddWorkout...');
         // Navigate to add workout screen with OCR data pre-filled
         navigation.replace('AddWorkout', {
           ocrData: ocrResponse.data.ocrData,
           photoUri: capturedPhoto,
         });
       } else {
-        // Show the actual error from the API for debugging
-        const errorMsg = ocrResponse.error || 'Could not read the erg screen';
+        const errorMsg = ocrResponse.error || 'Unknown error';
+        console.error('[OCR] Failed with error:', errorMsg);
         Alert.alert(
           'OCR Failed',
-          `${errorMsg}. Would you like to enter the data manually?`,
+          `${errorMsg}\n\nWould you like to enter the data manually?`,
           [
             {
               text: 'Try Again',
@@ -106,25 +115,14 @@ export const CameraScreen: React.FC = () => {
           ]
         );
       }
-    } catch (error: any) {
-      console.error('OCR processing failed:', error);
-
-      // Show actual error message for debugging
-      const errorMsg = error?.message || 'Unknown error';
-      let errorTitle = 'Processing Error';
-      let errorMessage = `${errorMsg}. Would you like to try again or enter data manually?`;
-
-      if (errorMsg.includes('timed out') || errorMsg.includes('aborted')) {
-        errorTitle = 'Request Timed Out';
-        errorMessage = 'The image processing took too long. Try with a clearer photo or enter data manually.';
-      } else if (errorMsg.includes('Network') || errorMsg.includes('fetch')) {
-        errorTitle = 'Network Error';
-        errorMessage = 'Could not connect to the server. Check your internet connection and try again.';
-      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[OCR] Exception caught:', errorMessage);
+      console.error('[OCR] Full error:', error);
 
       Alert.alert(
-        errorTitle,
-        errorMessage,
+        'Processing Error',
+        `${errorMessage}\n\nWould you like to try again or enter data manually?`,
         [
           {
             text: 'Try Again',
