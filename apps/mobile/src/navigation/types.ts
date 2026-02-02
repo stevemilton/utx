@@ -19,11 +19,13 @@ export type OnboardingStackParamList = {
   Tutorial: undefined;
 };
 
-// OCR Data type
+// OCR Data type - matches backend response from GPT-4o Vision
 export interface OcrWorkoutData {
   workoutType?: string;
   totalTimeSeconds?: number;
   totalDistanceMetres?: number;
+  estimatedDistanceMetres?: number; // Calculated when distance shows 0
+  distanceEstimated?: boolean;
   avgSplit?: number;
   avgStrokeRate?: number;
   avgWatts?: number;
@@ -31,6 +33,8 @@ export interface OcrWorkoutData {
   maxHeartRate?: number;
   calories?: number;
   dragFactor?: number;
+  confidence?: number; // 0-100, OCR confidence score
+  validationWarning?: string; // Warning from backend validation
   intervals?: Array<{
     distanceMetres?: number;
     timeSeconds?: number;
@@ -39,6 +43,11 @@ export interface OcrWorkoutData {
     watts?: number;
     heartRate?: number;
   }>;
+  rawValues?: {
+    timeDisplay?: string;
+    splitDisplay?: string;
+    distanceDisplay?: string;
+  };
 }
 
 // Main Tab Navigator

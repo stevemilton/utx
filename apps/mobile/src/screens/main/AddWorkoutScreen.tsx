@@ -36,6 +36,8 @@ const formatTime = (seconds: number): string => {
 // Helper to parse MM:SS.S or M.SS.S to seconds
 // Accepts both 1:51.9 (colon) and 1.51.9 (dots) formats
 const parseTime = (timeStr: string): number | null => {
+  if (!timeStr || timeStr.trim() === '') return null;
+
   // Try colon format first: M:SS.S or MM:SS.S
   const colonMatch = timeStr.match(/^(\d+):(\d+\.?\d*)$/);
   if (colonMatch) {
@@ -57,6 +59,103 @@ const parseTime = (timeStr: string): number | null => {
   return null;
 };
 
+// Calculate watts from split using Concept2 formula
+const calculateWatts = (splitSeconds: number): number => {
+  const pacePerMeter = splitSeconds / 500;
+  return Math.round(2.80 / Math.pow(pacePerMeter, 3));
+};
+
+// Calculate distance from time and split
+const calculateDistance = (timeSeconds: number, splitSeconds: number): number => {
+  return Math.round((timeSeconds / splitSeconds) * 500 / 10) * 10; // Round to nearest 10m
+};
+
+// Validation warning type
+interface ValidationWarning {
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
+// Validate workout data and return warnings
+const validateWorkoutData = (
+  timeSeconds: number | null,
+  distanceMetres: number | null,
+  splitSeconds: number | null,
+  strokeRate: number | null,
+  heartRate: number | null
+): ValidationWarning[] => {
+  const warnings: ValidationWarning[] = [];
+
+  // Split vs Time confusion detection
+  if (timeSeconds && timeSeconds < 120) {
+    warnings.push({
+      field: 'time',
+      message: 'Time seems very short. Did you enter the split by mistake?',
+      severity: 'warning',
+    });
+  }
+
+  if (splitSeconds && splitSeconds > 240) {
+    warnings.push({
+      field: 'split',
+      message: 'Split seems very slow (over 4:00/500m). Is this correct?',
+      severity: 'warning',
+    });
+  }
+
+  if (splitSeconds && splitSeconds < 70) {
+    warnings.push({
+      field: 'split',
+      message: 'Split seems very fast (under 1:10/500m). Is this correct?',
+      severity: 'warning',
+    });
+  }
+
+  // Cross-validation: split should be less than total time
+  if (splitSeconds && timeSeconds && splitSeconds >= timeSeconds) {
+    warnings.push({
+      field: 'split',
+      message: 'Split cannot be longer than total time. These may be swapped.',
+      severity: 'error',
+    });
+  }
+
+  // Cross-validation: distance should match time/split calculation
+  if (distanceMetres && timeSeconds && splitSeconds) {
+    const expectedDistance = calculateDistance(timeSeconds, splitSeconds);
+    const variance = Math.abs(distanceMetres - expectedDistance) / expectedDistance;
+
+    if (variance > 0.15) {
+      warnings.push({
+        field: 'distance',
+        message: `Distance doesn't match time/split. Expected ~${expectedDistance}m`,
+        severity: 'warning',
+      });
+    }
+  }
+
+  // Stroke rate sanity check
+  if (strokeRate && (strokeRate < 16 || strokeRate > 45)) {
+    warnings.push({
+      field: 'strokeRate',
+      message: 'Stroke rate seems unusual (typically 18-38 s/m)',
+      severity: 'warning',
+    });
+  }
+
+  // Heart rate sanity check
+  if (heartRate && (heartRate < 80 || heartRate > 220)) {
+    warnings.push({
+      field: 'heartRate',
+      message: 'Heart rate seems unusual',
+      severity: 'warning',
+    });
+  }
+
+  return warnings;
+};
+
 export const AddWorkoutScreen: React.FC = () => {
   const navigation = useNavigation<MainTabScreenProps<'AddWorkout'>['navigation']>();
   const route = useRoute<AddWorkoutRouteProp>();
@@ -72,9 +171,11 @@ export const AddWorkoutScreen: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(photoUri || null);
 
-  // Workout data
+  // Workout data - handle both old and new OCR field names
   const [workoutType, setWorkoutType] = useState(ocrData?.workoutType || 'distance');
-  const [distance, setDistance] = useState(ocrData?.totalDistanceMetres?.toString() || '');
+  const [distance, setDistance] = useState(
+    (ocrData?.totalDistanceMetres || ocrData?.estimatedDistanceMetres)?.toString() || ''
+  );
   const [time, setTime] = useState(
     ocrData?.totalTimeSeconds ? formatTime(ocrData.totalTimeSeconds) : ''
   );
@@ -86,6 +187,37 @@ export const AddWorkoutScreen: React.FC = () => {
   const [dragFactor, setDragFactor] = useState(ocrData?.dragFactor?.toString() || '');
   const [notes, setNotes] = useState('');
   const [isPublic, setIsPublic] = useState(false); // Default to private
+  const [ocrConfidence, setOcrConfidence] = useState<number | null>(ocrData?.confidence || null);
+  const [distanceWasEstimated, setDistanceWasEstimated] = useState(
+    ocrData?.distanceEstimated || ocrData?.estimatedDistanceMetres ? true : false
+  );
+
+  // Computed values for validation
+  const timeSeconds = parseTime(time);
+  const distanceMetres = distance ? parseInt(distance, 10) : null;
+  const splitSeconds = parseTime(split);
+  const strokeRateNum = strokeRate ? parseInt(strokeRate, 10) : null;
+  const heartRateNum = heartRate ? parseInt(heartRate, 10) : null;
+
+  // Auto-calculate watts from split
+  const calculatedWatts = splitSeconds ? calculateWatts(splitSeconds) : null;
+
+  // Auto-calculate estimated distance if we have time and split but no distance
+  const estimatedDistance = (!distanceMetres && timeSeconds && splitSeconds)
+    ? calculateDistance(timeSeconds, splitSeconds)
+    : null;
+
+  // Validation warnings
+  const validationWarnings = validateWorkoutData(
+    timeSeconds,
+    distanceMetres,
+    splitSeconds,
+    strokeRateNum,
+    heartRateNum
+  );
+
+  // Get warning for a specific field
+  const getFieldWarning = (field: string) => validationWarnings.find(w => w.field === field);
 
   const handleTakePhoto = () => {
     navigation.navigate('Camera');
@@ -126,11 +258,20 @@ export const AddWorkoutScreen: React.FC = () => {
       const response = await api.processOcr(base64);
 
       if (response.success && response.data?.ocrData) {
-        const data = response.data.ocrData as OcrWorkoutData;
+        const data = response.data.ocrData as any; // Allow new field names
 
         // Pre-fill form with OCR data
         if (data.workoutType) setWorkoutType(data.workoutType);
-        if (data.totalDistanceMetres) setDistance(data.totalDistanceMetres.toString());
+
+        // Handle distance - prefer actual, fall back to estimated
+        if (data.totalDistanceMetres) {
+          setDistance(data.totalDistanceMetres.toString());
+          setDistanceWasEstimated(false);
+        } else if (data.estimatedDistanceMetres) {
+          setDistance(data.estimatedDistanceMetres.toString());
+          setDistanceWasEstimated(true);
+        }
+
         if (data.totalTimeSeconds) setTime(formatTime(data.totalTimeSeconds));
         if (data.avgSplit) setSplit(formatTime(data.avgSplit));
         if (data.avgStrokeRate) setStrokeRate(data.avgStrokeRate.toString());
@@ -139,7 +280,19 @@ export const AddWorkoutScreen: React.FC = () => {
         if (data.calories) setCalories(data.calories.toString());
         if (data.dragFactor) setDragFactor(data.dragFactor.toString());
 
+        // Store OCR confidence for display
+        if (data.confidence) setOcrConfidence(data.confidence);
+
         setShowForm(true);
+
+        // Show low confidence warning
+        if (data.confidence && data.confidence < 70) {
+          Alert.alert(
+            'Low Confidence',
+            'The OCR reading has low confidence. Please verify the data is correct.',
+            [{ text: 'OK' }]
+          );
+        }
       } else {
         Alert.alert(
           'OCR Failed',
@@ -329,39 +482,82 @@ export const AddWorkoutScreen: React.FC = () => {
 
               {/* Distance */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Distance (metres)</Text>
+                <Text style={styles.label}>
+                  Distance (metres)
+                  {distanceWasEstimated && (
+                    <Text style={styles.estimatedLabel}> (estimated)</Text>
+                  )}
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    getFieldWarning('distance') && styles.inputWarning,
+                  ]}
                   value={distance}
-                  onChangeText={setDistance}
+                  onChangeText={(val) => {
+                    setDistance(val);
+                    setDistanceWasEstimated(false);
+                  }}
                   keyboardType="numeric"
                   placeholder="e.g., 2000"
                   placeholderTextColor={colors.textTertiary}
                 />
+                {getFieldWarning('distance') && (
+                  <Text style={styles.warningText}>
+                    ⚠️ {getFieldWarning('distance')?.message}
+                  </Text>
+                )}
+                {estimatedDistance && !distanceMetres && (
+                  <Text style={styles.estimatedText}>
+                    📊 Estimated: ~{estimatedDistance}m
+                  </Text>
+                )}
               </View>
 
               {/* Time */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Time (m:ss.s)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    getFieldWarning('time') && styles.inputWarning,
+                  ]}
                   value={time}
                   onChangeText={setTime}
                   placeholder="e.g., 7:23.4"
                   placeholderTextColor={colors.textTertiary}
                 />
+                {getFieldWarning('time') && (
+                  <Text style={styles.warningText}>
+                    ⚠️ {getFieldWarning('time')?.message}
+                  </Text>
+                )}
               </View>
 
               {/* Split */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Average Split (m:ss.s / 500m)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    getFieldWarning('split') && styles.inputError,
+                  ]}
                   value={split}
                   onChangeText={setSplit}
                   placeholder="e.g., 1:51.2"
                   placeholderTextColor={colors.textTertiary}
                 />
+                {getFieldWarning('split') && (
+                  <Text style={[
+                    styles.warningText,
+                    getFieldWarning('split')?.severity === 'error' && styles.errorText,
+                  ]}>
+                    {getFieldWarning('split')?.severity === 'error' ? '❌' : '⚠️'} {getFieldWarning('split')?.message}
+                  </Text>
+                )}
+                {calculatedWatts && (
+                  <Text style={styles.calculatedText}>≈ {calculatedWatts}W</Text>
+                )}
               </View>
 
               {/* Row of smaller inputs */}
@@ -471,11 +667,45 @@ export const AddWorkoutScreen: React.FC = () => {
                 </View>
               </View>
 
+              {/* OCR Confidence Indicator */}
+              {ocrConfidence && (
+                <View style={[
+                  styles.confidenceBar,
+                  ocrConfidence >= 80 ? styles.confidenceHigh :
+                  ocrConfidence >= 50 ? styles.confidenceMedium : styles.confidenceLow,
+                ]}>
+                  <Ionicons
+                    name={ocrConfidence >= 80 ? 'checkmark-circle' : 'warning'}
+                    size={16}
+                    color={ocrConfidence >= 80 ? colors.success : colors.warning}
+                  />
+                  <Text style={styles.confidenceText}>
+                    OCR Confidence: {ocrConfidence}%
+                    {ocrConfidence < 70 && ' - Please verify data'}
+                  </Text>
+                </View>
+              )}
+
+              {/* Validation Warnings Summary */}
+              {validationWarnings.length > 0 && (
+                <View style={styles.validationSummary}>
+                  <Text style={styles.validationTitle}>⚠️ Please review:</Text>
+                  {validationWarnings.map((warning, index) => (
+                    <Text key={index} style={[
+                      styles.validationItem,
+                      warning.severity === 'error' && styles.validationError,
+                    ]}>
+                      • {warning.message}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
               {/* Save Button */}
               <Button
                 title={isSaving ? 'Saving...' : 'Save Workout'}
                 onPress={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || validationWarnings.some(w => w.severity === 'error')}
                 style={styles.saveButton}
               />
             </View>
@@ -757,6 +987,84 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: spacing.lg,
+  },
+  // Validation styles
+  inputWarning: {
+    borderColor: colors.warning,
+    backgroundColor: 'rgba(251, 191, 36, 0.05)',
+  },
+  inputError: {
+    borderColor: colors.error,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+  },
+  warningText: {
+    fontSize: fontSize.xs,
+    color: colors.warning,
+    marginTop: spacing.xs,
+  },
+  errorText: {
+    color: colors.error,
+  },
+  estimatedLabel: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.regular,
+  },
+  estimatedText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    marginTop: spacing.xs,
+  },
+  calculatedText: {
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
+  // Confidence indicator
+  confidenceBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+  },
+  confidenceHigh: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  confidenceMedium: {
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+  },
+  confidenceLow: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  confidenceText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  // Validation summary
+  validationSummary: {
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  validationTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.warning,
+    marginBottom: spacing.xs,
+  },
+  validationItem: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  validationError: {
+    color: colors.error,
   },
   // Privacy toggle styles
   privacySection: {
