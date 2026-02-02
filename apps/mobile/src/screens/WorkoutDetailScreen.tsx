@@ -736,11 +736,12 @@ const EffortRing: React.FC<{ effortResult: EffortResult; size?: number }> = ({ e
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`}
         />
-        {/* Center text */}
+        {/* Center text - properly centered */}
         <SvgText
           x={center}
-          y={center - 10}
+          y={center - 5}
           textAnchor="middle"
+          alignmentBaseline="middle"
           fontSize={42}
           fontWeight="bold"
           fill={colors.textPrimary}
@@ -749,8 +750,9 @@ const EffortRing: React.FC<{ effortResult: EffortResult; size?: number }> = ({ e
         </SvgText>
         <SvgText
           x={center}
-          y={center + 20}
+          y={center + 28}
           textAnchor="middle"
+          alignmentBaseline="middle"
           fontSize={14}
           fill={colors.textTertiary}
         >

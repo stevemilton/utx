@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  Modal,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
 import { useOnboardingStore } from '../../stores/onboardingStore';
@@ -180,21 +183,41 @@ export const ProfilePhysicalScreen: React.FC = () => {
             onPress={() => setShowDatePicker(true)}
           >
             <Text style={styles.dateText}>{formatDate(birthDate)}</Text>
+            <Ionicons name="calendar-outline" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={birthDate}
-              mode="date"
-              display="spinner"
-              themeVariant="light"
-              onChange={(event, date) => {
-                setShowDatePicker(false);
-                if (date) setBirthDate(date);
-              }}
-              maximumDate={new Date()}
-              minimumDate={new Date(1940, 0, 1)}
-            />
-          )}
+
+          {/* Date Picker Modal */}
+          <Modal
+            visible={showDatePicker}
+            transparent
+            animationType="slide"
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.datePickerModal}>
+                <View style={styles.datePickerHeader}>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Text style={styles.datePickerCancel}>Cancel</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.datePickerTitle}>Date of Birth</Text>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Text style={styles.datePickerDone}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={birthDate}
+                  mode="date"
+                  display="spinner"
+                  themeVariant="light"
+                  onChange={(event, date) => {
+                    if (date) setBirthDate(date);
+                  }}
+                  maximumDate={new Date()}
+                  minimumDate={new Date(1940, 0, 1)}
+                  style={styles.datePicker}
+                />
+              </View>
+            </View>
+          </Modal>
         </View>
 
         {/* Gender */}
@@ -210,6 +233,14 @@ export const ProfilePhysicalScreen: React.FC = () => {
                 ]}
                 onPress={() => setGender(option.value)}
               >
+                {gender === option.value && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={18}
+                    color={colors.primary}
+                    style={styles.genderIcon}
+                  />
+                )}
                 <Text
                   style={[
                     styles.genderText,
@@ -311,7 +342,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   unitTextActive: {
-    color: colors.textPrimary,
+    color: colors.white,
   },
   fieldContainer: {
     marginBottom: spacing.lg,
@@ -328,32 +359,74 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   dateText: {
     fontSize: fontSize.md,
     color: colors.textPrimary,
   },
-  genderOptions: {
+  // Date Picker Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerModal: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingBottom: spacing.xxl,
+  },
+  datePickerHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  datePickerTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  datePickerCancel: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+  datePickerDone: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  datePicker: {
+    height: 200,
+  },
+  // Gender buttons - improved layout
+  genderOptions: {
+    flexDirection: 'column',
     gap: spacing.sm,
-    flexWrap: 'wrap',
   },
   genderButton: {
-    flex: 1,
-    minWidth: 90,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    alignItems: 'center',
   },
   genderButtonActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primarySubtle,
   },
+  genderIcon: {
+    marginRight: spacing.sm,
+  },
   genderText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.textSecondary,
     fontWeight: fontWeight.medium,
   },
