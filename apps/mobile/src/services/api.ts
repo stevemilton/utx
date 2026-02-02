@@ -388,6 +388,17 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  async getStravaStatus() {
+    return this.request<{ connected: boolean; autoSync: boolean }>(ENDPOINTS.strava.status);
+  }
+
+  async updateStravaSettings(autoSync: boolean) {
+    return this.request<{ autoSync: boolean }>(ENDPOINTS.strava.settings, {
+      method: 'PATCH',
+      body: { autoSync },
+    });
+  }
 }
 
 export const api = new ApiService();

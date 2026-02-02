@@ -22,6 +22,7 @@ export const SettingsScreen: React.FC = () => {
   const { user, logout } = useAuthStore();
 
   const [stravaConnected, setStravaConnected] = useState(false);
+  const [stravaAutoSync, setStravaAutoSync] = useState(true);
   const [loading, setLoading] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -50,13 +51,28 @@ export const SettingsScreen: React.FC = () => {
 
   const checkStravaStatus = async () => {
     try {
-      const response = await api.getStravaAuthUrl();
-      // If we have user.stravaConnected, use that
-      if (user?.stravaConnected) {
-        setStravaConnected(true);
+      const response = await api.getStravaStatus();
+      if (response.success && response.data) {
+        setStravaConnected(response.data.connected);
+        setStravaAutoSync(response.data.autoSync);
       }
     } catch (error) {
       console.error('Error checking Strava status:', error);
+    }
+  };
+
+  const handleAutoSyncToggle = async (value: boolean) => {
+    setStravaAutoSync(value);
+    try {
+      const response = await api.updateStravaSettings(value);
+      if (!response.success) {
+        setStravaAutoSync(!value); // Revert on error
+        Alert.alert('Error', 'Failed to update auto-sync setting');
+      }
+    } catch (error) {
+      console.error('Error updating auto-sync:', error);
+      setStravaAutoSync(!value); // Revert on error
+      Alert.alert('Error', 'Failed to update auto-sync setting');
     }
   };
 
@@ -242,7 +258,7 @@ export const SettingsScreen: React.FC = () => {
           <View style={styles.sectionContent}>
             <SettingRow
               title="Strava"
-              subtitle={stravaConnected ? 'Connected' : 'Connect to sync workouts'}
+              subtitle={stravaConnected ? 'Connected - tap to disconnect' : 'Connect to sync workouts'}
               onPress={handleConnectStrava}
               rightElement={
                 loading ? (
@@ -266,6 +282,19 @@ export const SettingsScreen: React.FC = () => {
                 )
               }
             />
+            {stravaConnected && (
+              <SettingRow
+                title="Auto-sync Workouts"
+                subtitle="Automatically push new workouts to Strava"
+                rightElement={
+                  <Switch
+                    value={stravaAutoSync}
+                    onValueChange={handleAutoSyncToggle}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                  />
+                }
+              />
+            )}
           </View>
         </View>
 

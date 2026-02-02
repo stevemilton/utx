@@ -1,13 +1,16 @@
-import React, { useEffect, Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, Component, ErrorInfo, ReactNode, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
 import { RootNavigator } from './src/navigation';
 import { useAuthStore } from './src/stores/authStore';
 import { colors } from './src/constants/theme';
+import { api } from './src/services/api';
+import type { RootStackParamList } from './src/navigation/types';
 
 // Keep splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -94,8 +97,85 @@ const errorStyles = StyleSheet.create({
   },
 });
 
+// Deep linking configuration
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: [Linking.createURL('/'), 'utx://'],
+  config: {
+    screens: {
+      Main: 'main',
+    },
+  },
+};
+
 function AppContent() {
-  const { isLoading, setLoading } = useAuthStore();
+  const { isLoading, setLoading, isAuthenticated } = useAuthStore();
+  const handledCallbackRef = useRef(false);
+
+  // Handle Strava OAuth callback
+  useEffect(() => {
+    const handleStravaCallback = async (url: string) => {
+      // Prevent handling the same callback twice
+      if (handledCallbackRef.current) return;
+
+      // Check if it's a Strava callback URL
+      if (url.includes('strava-callback')) {
+        handledCallbackRef.current = true;
+
+        try {
+          const urlObj = new URL(url);
+          const code = urlObj.searchParams.get('code');
+          const error = urlObj.searchParams.get('error');
+
+          if (error) {
+            Alert.alert('Strava Connection Failed', 'Authorization was denied or cancelled.');
+            return;
+          }
+
+          if (code) {
+            const response = await api.stravaCallback(code);
+            if (response.success) {
+              Alert.alert(
+                'Strava Connected!',
+                'Your workouts will now automatically sync to Strava.',
+                [{ text: 'Great!' }]
+              );
+            } else {
+              Alert.alert('Connection Failed', response.error || 'Failed to connect Strava.');
+            }
+          }
+        } catch (error) {
+          console.error('Strava callback error:', error);
+          Alert.alert('Error', 'Failed to complete Strava connection.');
+        } finally {
+          // Reset after a delay to allow re-connection attempts
+          setTimeout(() => {
+            handledCallbackRef.current = false;
+          }, 5000);
+        }
+      }
+    };
+
+    // Handle initial URL (app opened via deep link)
+    const handleInitialUrl = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        handleStravaCallback(initialUrl);
+      }
+    };
+
+    // Handle URL while app is open
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleStravaCallback(event.url);
+    });
+
+    if (isAuthenticated) {
+      handleInitialUrl();
+    }
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     async function prepare() {
@@ -126,6 +206,7 @@ function AppContent() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <NavigationContainer
+          linking={linking}
           theme={{
             dark: true,
             colors: {
