@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390, initial-scale=1.0">
+  <title>UTx - Camera/OCR Flow v2</title>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E55A2B;
+      --bg: #000000;
+      --surface: #1C1C1E;
+      --surface-light: #2C2C2E;
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #636366;
+      --border: #38383A;
+      --success: #30D158;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
+      background: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .phone-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .screen-label {
+      color: #888;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 0 50px 100px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 34px;
+      background: #000;
+      border-radius: 0 0 24px 24px;
+      z-index: 10;
+    }
+
+    /* Camera Screen */
+    .camera-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+    }
+
+    .camera-header {
+      position: absolute;
+      top: 54px;
+      left: 0;
+      right: 0;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 5;
+    }
+
+    .camera-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 22px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .camera-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke: white;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .camera-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* Guide Frame */
+    .guide-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .guide-frame {
+      width: 320px;
+      height: 180px;
+      border: 2px solid rgba(255, 107, 53, 0.6);
+      border-radius: 16px;
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .corner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-color: var(--primary);
+      border-style: solid;
+    }
+
+    .corner-tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-radius: 8px 0 0 0; }
+    .corner-tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-radius: 0 8px 0 0; }
+    .corner-bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-radius: 0 0 0 8px; }
+    .corner-br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-radius: 0 0 8px 0; }
+
+    /* Erg Screen Simulation */
+    .erg-display {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      height: 150px;
+      background: #0a1a0a;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .erg-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .erg-label {
+      color: #30ff30;
+      font-size: 10px;
+    }
+
+    .erg-value {
+      color: #30ff30;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .erg-big {
+      font-size: 32px;
+      text-align: center;
+      color: #30ff30;
+      margin: 8px 0;
+    }
+
+    .guide-text {
+      font-size: 15px;
+      color: rgba(255,255,255,0.8);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      font-weight: 500;
+    }
+
+    /* Camera Controls */
+    .camera-controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 40px 24px 50px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    }
+
+    .gallery-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .gallery-btn svg {
+      width: 26px;
+      height: 26px;
+      stroke: white;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .capture-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 40px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255,255,255,0.3);
+    }
+
+    .capture-inner {
+      width: 64px;
+      height: 64px;
+      border-radius: 32px;
+      background: white;
+      border: 4px solid var(--bg);
+    }
+
+    .flash-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 28px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .flash-btn svg {
+      width: 24px;
+      height: 24px;
+      stroke: white;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    /* Processing Screen */
+    .processing-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+
+    .spinner {
+      width: 56px;
+      height: 56px;
+      border: 3px solid var(--surface-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .processing-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .processing-subtext {
+      font-size: 14px;
+      color: var(--text-tertiary);
+    }
+
+    /* OCR Result Screen */
+    .status-bar {
+      height: 54px;
+      padding: 14px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .ocr-header {
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 54px;
+    }
+
+    .ocr-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .ocr-badge {
+      background: var(--success);
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ocr-badge svg {
+      width: 14px;
+      height: 14px;
+      stroke: white;
+      stroke-width: 3;
+    }
+
+    .ocr-content {
+      padding: 0 24px;
+      overflow-y: auto;
+      height: calc(100% - 54px - 72px - 100px);
+    }
+
+    .data-card {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .data-card-title {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-row:last-child {
+      border-bottom: none;
+    }
+
+    .data-label {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .data-value {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .data-value.editable {
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .data-value.editable svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--primary);
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+
+    .ocr-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+    }
+
+    /* Confidence indicator */
+    .confidence-section {
+      padding: 12px 0 0;
+    }
+
+    .confidence-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .confidence-label {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    .confidence-value {
+      font-size: 13px;
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .confidence-bar {
+      height: 4px;
+      background: var(--surface-light);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: var(--success);
+      border-radius: 2px;
+    }
+
+    /* Preview actions */
+    .preview-actions {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px;
+      background: var(--bg);
+    }
+
+    .hint-text {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 18px 24px;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 18px 24px;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <!-- Camera Screen -->
+  <div class="phone-wrapper">
+    <div class="screen-label">1. Camera View</div>
+    <div class="phone-frame">
+      <div class="notch"></div>
+
+      <div class="camera-view">
+        <div class="camera-header">
+          <div class="camera-btn">
+            <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </div>
+          <span class="camera-title">Capture Erg Screen</span>
+          <div class="camera-btn">
+            <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </div>
+        </div>
+
+        <div class="guide-container">
+          <div class="guide-frame">
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+
+            <div class="erg-display">
+              <div class="erg-row">
+                <div><span class="erg-label">TIME</span><br><span class="erg-value">6:49.2</span></div>
+                <div><span class="erg-label">METERS</span><br><span class="erg-value">2000</span></div>
+              </div>
+              <div class="erg-big">1:42.3</div>
+              <div class="erg-row">
+                <div><span class="erg-label">S/M</span><br><span class="erg-value">32</span></div>
+                <div><span class="erg-label">WATTS</span><br><span class="erg-value">312</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="guide-text">Align the erg display within the frame</p>
+        </div>
+
+        <div class="camera-controls">
+          <div class="gallery-btn">
+            <svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </div>
+          <div class="capture-btn">
+            <div class="capture-inner"></div>
+          </div>
+          <div class="flash-btn">
+            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Screen -->
+  <div class="phone-wrapper">
+    <div class="screen-label">2. Photo Preview</div>
+    <div class="phone-frame">
+      <div class="notch"></div>
+
+      <div class="camera-view">
+        <div class="camera-header">
+          <div class="camera-btn">
+            <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </div>
+          <span class="camera-title">Review Photo</span>
+          <div style="width: 44px;"></div>
+        </div>
+
+        <div class="guide-container">
+          <div class="erg-display" style="position: relative; transform: none; width: 300px; height: 170px;">
+            <div class="erg-row">
+              <div><span class="erg-label">TIME</span><br><span class="erg-value">6:49.2</span></div>
+              <div><span class="erg-label">METERS</span><br><span class="erg-value">2000</span></div>
+            </div>
+            <div class="erg-big">1:42.3</div>
+            <div class="erg-row">
+              <div><span class="erg-label">S/M</span><br><span class="erg-value">32</span></div>
+              <div><span class="erg-label">WATTS</span><br><span class="erg-value">312</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-actions">
+          <p class="hint-text">Make sure the erg screen is clearly visible</p>
+          <div class="action-row">
+            <button class="btn-secondary">Retake</button>
+            <button class="btn-action">Use Photo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Processing Screen -->
+  <div class="phone-wrapper">
+    <div class="screen-label">3. Processing</div>
+    <div class="phone-frame">
+      <div class="notch"></div>
+
+      <div class="processing-overlay">
+        <div class="spinner"></div>
+        <p class="processing-text">Reading erg screen...</p>
+        <p class="processing-subtext">Using AI to extract workout data</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- OCR Result Screen -->
+  <div class="phone-wrapper">
+    <div class="screen-label">4. Confirm Data</div>
+    <div class="phone-frame">
+      <div class="notch"></div>
+      <div class="status-bar">
+        <span>9:41</span>
+        <span style="display: flex; gap: 6px; align-items: center;">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><path d="M1 4h2v8H1V4zm4-2h2v10H5V2zm4-2h2v12H9V0zm4 4h2v8h-2V4zm4 2h2v6h-2V6z"/></svg>
+          <svg width="27" height="14" viewBox="0 0 27 14"><rect x="0.5" y="0.5" width="23" height="13" rx="3" stroke="currentColor" fill="none"/><rect x="2" y="2" width="18" height="10" rx="2" fill="currentColor"/><path d="M25 5v4a2 2 0 0 0 0-4z" fill="currentColor"/></svg>
+        </span>
+      </div>
+
+      <div class="ocr-header">
+        <h1 class="ocr-title">Confirm Workout</h1>
+        <span class="ocr-badge">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Detected
+        </span>
+      </div>
+
+      <div class="ocr-content">
+        <div class="data-card">
+          <div class="data-card-title">Workout Type</div>
+          <div class="data-row">
+            <span class="data-label">Type</span>
+            <span class="data-value editable">
+              2K Test
+              <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div class="data-card-title">Performance</div>
+          <div class="data-row">
+            <span class="data-label">Total Time</span>
+            <span class="data-value">6:49.2</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Distance</span>
+            <span class="data-value">2,000m</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Avg Split</span>
+            <span class="data-value">1:42.3</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Stroke Rate</span>
+            <span class="data-value">32 spm</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Power</span>
+            <span class="data-value">312 watts</span>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div class="data-card-title">Optional</div>
+          <div class="data-row">
+            <span class="data-label">Effort Score</span>
+            <span class="data-value editable">
+              Add
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Heart Rate</span>
+            <span class="data-value editable">
+              Add
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Notes</span>
+            <span class="data-value editable">
+              Add
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="confidence-section">
+          <div class="confidence-header">
+            <span class="confidence-label">OCR Confidence</span>
+            <span class="confidence-value">98%</span>
+          </div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width: 98%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ocr-footer">
+        <button class="btn">Save Workout</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390, initial-scale=1.0">
+  <title>UTx - Profile v2</title>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E55A2B;
+      --bg: #000000;
+      --bg-tertiary: #141414;
+      --surface: #1C1C1E;
+      --surface-light: #2C2C2E;
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #636366;
+      --border: #38383A;
+      --success: #30D158;
+      --error: #FF453A;
+      --pb-gold: #FFD700;
+    }
+
+    .light-mode {
+      --bg: #F2F2F7;
+      --bg-tertiary: #E5E5EA;
+      --surface: #FFFFFF;
+      --surface-light: #F2F2F7;
+      --text-primary: #000000;
+      --text-secondary: #6B6B6B;
+      --text-tertiary: #8E8E93;
+      --border: #E5E5EA;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
+      background: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+      gap: 40px;
+    }
+
+    .container {
+      display: flex;
+      gap: 40px;
+    }
+
+    .phone-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .mode-label {
+      color: #888;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 0 50px 100px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .light-mode .phone-frame {
+      box-shadow: 0 50px 100px rgba(0,0,0,0.15);
+    }
+
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 34px;
+      background: #000;
+      border-radius: 0 0 24px 24px;
+      z-index: 10;
+    }
+
+    .status-bar {
+      height: 54px;
+      padding: 14px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .content {
+      height: calc(100% - 54px - 83px);
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+
+    /* Header */
+    .header {
+      padding: 8px 20px 16px;
+    }
+
+    .header h1 {
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    /* Profile Card */
+    .profile-card {
+      margin: 0 16px 20px;
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .avatar-large {
+      width: 72px;
+      height: 72px;
+      border-radius: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 600;
+      color: white;
+      position: relative;
+    }
+
+    .avatar-edit {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 26px;
+      height: 26px;
+      border-radius: 13px;
+      background: var(--surface-light);
+      border: 3px solid var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar-edit svg {
+      width: 12px;
+      height: 12px;
+      stroke: var(--text-primary);
+      stroke-width: 2;
+    }
+
+    .profile-info {
+      flex: 1;
+    }
+
+    .profile-name {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .profile-stats-inline {
+      display: flex;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .stat-item {
+      background: var(--bg);
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .light-mode .stat-item {
+      background: var(--surface);
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    /* Section */
+    .section {
+      margin: 0 16px 20px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .section-action {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .section-action svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--primary);
+      stroke-width: 2;
+    }
+
+    /* PB Grid */
+    .pb-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .pb-item {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .pb-label {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .pb-value {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pb-value.empty {
+      color: var(--text-tertiary);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .pb-item.highlight {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 165, 0, 0.08));
+      border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .pb-item.highlight .pb-value {
+      color: var(--pb-gold);
+    }
+
+    /* Settings Card */
+    .settings-card {
+      background: var(--surface);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .settings-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .settings-item:last-child {
+      border-bottom: none;
+    }
+
+    .settings-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .light-mode .settings-icon {
+      background: var(--surface-light);
+    }
+
+    .settings-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .settings-content {
+      flex: 1;
+    }
+
+    .settings-label {
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+
+    .settings-sublabel {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    .settings-badge {
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: rgba(48, 209, 88, 0.15);
+      color: var(--success);
+    }
+
+    .badge-connect {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .light-mode .badge-connect {
+      background: var(--surface-light);
+    }
+
+    .settings-chevron {
+      width: 20px;
+      height: 20px;
+      stroke: var(--text-tertiary);
+      stroke-width: 2;
+    }
+
+    .settings-item.danger .settings-label {
+      color: var(--error);
+    }
+
+    .settings-item.danger .settings-icon svg {
+      stroke: var(--error);
+    }
+
+    /* Club Card */
+    .club-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .club-item:last-child {
+      border-bottom: none;
+    }
+
+    .club-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .club-info {
+      flex: 1;
+    }
+
+    .club-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .club-location {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    .add-club-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 16px;
+      gap: 8px;
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    .add-club-item svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-tertiary);
+      stroke-width: 2;
+    }
+
+    .add-club-text {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    /* Tab Bar */
+    .tab-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 83px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      padding-top: 8px;
+    }
+
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 16px;
+    }
+
+    .tab-item svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--text-tertiary);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .tab-item.active svg {
+      stroke: var(--primary);
+    }
+
+    .tab-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    .tab-item.active .tab-label {
+      color: var(--primary);
+    }
+
+    /* App Version */
+    .app-version {
+      text-align: center;
+      padding: 24px 0 16px;
+    }
+
+    .app-logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .app-ver {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Dark Mode -->
+    <div class="phone-wrapper">
+      <div class="mode-label">Profile - Dark</div>
+      <div class="phone-frame">
+        <div class="notch"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <span style="display: flex; gap: 6px; align-items: center;">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><path d="M1 4h2v8H1V4zm4-2h2v10H5V2zm4-2h2v12H9V0zm4 4h2v8h-2V4zm4 2h2v6h-2V6z"/></svg>
+            <svg width="27" height="14" viewBox="0 0 27 14"><rect x="0.5" y="0.5" width="23" height="13" rx="3" stroke="currentColor" fill="none"/><rect x="2" y="2" width="18" height="10" rx="2" fill="currentColor"/><path d="M25 5v4a2 2 0 0 0 0-4z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="content">
+          <div class="header">
+            <h1>Profile</h1>
+          </div>
+
+          <!-- Profile Card -->
+          <div class="profile-card">
+            <div class="profile-header">
+              <div class="avatar-large">
+                JT
+                <div class="avatar-edit">
+                  <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                </div>
+              </div>
+              <div class="profile-info">
+                <div class="profile-name">James Thompson</div>
+                <div class="profile-stats-inline">
+                  <span>185cm</span>
+                  <span>•</span>
+                  <span>82kg</span>
+                  <span>•</span>
+                  <span>HR 192</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-value">127</div>
+                <div class="stat-label">Workouts</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">1.2M</div>
+                <div class="stat-label">Metres</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">156h</div>
+                <div class="stat-label">Time</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Personal Bests -->
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">Personal Bests</span>
+              <span class="section-action">
+                See All
+                <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </span>
+            </div>
+
+            <div class="pb-grid">
+              <div class="pb-item highlight">
+                <div class="pb-label">500m</div>
+                <div class="pb-value">1:22.4</div>
+              </div>
+              <div class="pb-item highlight">
+                <div class="pb-label">2K</div>
+                <div class="pb-value">6:49.2</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">5K</div>
+                <div class="pb-value">18:32</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">10K</div>
+                <div class="pb-value">38:45</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">1 Min</div>
+                <div class="pb-value">382m</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">HM</div>
+                <div class="pb-value empty">Set PB</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clubs -->
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">Clubs</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="club-item">
+                <div class="club-icon">LC</div>
+                <div class="club-info">
+                  <div class="club-name">London Rowing Club</div>
+                  <div class="club-location">Putney, London</div>
+                </div>
+                <svg class="settings-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+            </div>
+
+            <div class="add-club-item">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              <span class="add-club-text">Join another club</span>
+            </div>
+          </div>
+
+          <!-- Connections -->
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">Connections</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Strava</div>
+                  <div class="settings-sublabel">Auto-sync workouts</div>
+                </div>
+                <span class="settings-badge badge-success">Connected</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Apple Health</div>
+                  <div class="settings-sublabel">Sync heart rate data</div>
+                </div>
+                <span class="settings-badge badge-connect">Connect</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">Settings</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Notifications</div>
+                </div>
+                <svg class="settings-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Help & Support</div>
+                </div>
+                <svg class="settings-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Privacy</div>
+                </div>
+                <svg class="settings-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Account Actions -->
+          <div class="section">
+            <div class="settings-card">
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Log Out</div>
+                </div>
+              </div>
+              <div class="settings-item danger">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Delete Account</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-version">
+            <div class="app-logo">UTx</div>
+            <div class="app-ver">Version 1.0.0</div>
+          </div>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="tab-label">Feed</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            <span class="tab-label">Workouts</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            <span class="tab-label">Leaderboard</span>
+          </div>
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="tab-label">Profile</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Light Mode -->
+    <div class="phone-wrapper light-mode">
+      <div class="mode-label">Profile - Light</div>
+      <div class="phone-frame">
+        <div class="notch"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <span style="display: flex; gap: 6px; align-items: center;">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><path d="M1 4h2v8H1V4zm4-2h2v10H5V2zm4-2h2v12H9V0zm4 4h2v8h-2V4zm4 2h2v6h-2V6z"/></svg>
+            <svg width="27" height="14" viewBox="0 0 27 14"><rect x="0.5" y="0.5" width="23" height="13" rx="3" stroke="currentColor" fill="none"/><rect x="2" y="2" width="18" height="10" rx="2" fill="currentColor"/><path d="M25 5v4a2 2 0 0 0 0-4z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="content">
+          <div class="header">
+            <h1>Profile</h1>
+          </div>
+
+          <!-- Profile Card -->
+          <div class="profile-card">
+            <div class="profile-header">
+              <div class="avatar-large">
+                JT
+                <div class="avatar-edit">
+                  <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                </div>
+              </div>
+              <div class="profile-info">
+                <div class="profile-name">James Thompson</div>
+                <div class="profile-stats-inline">
+                  <span>185cm</span>
+                  <span>•</span>
+                  <span>82kg</span>
+                  <span>•</span>
+                  <span>HR 192</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-value">127</div>
+                <div class="stat-label">Workouts</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">1.2M</div>
+                <div class="stat-label">Metres</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">156h</div>
+                <div class="stat-label">Time</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Personal Bests -->
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">Personal Bests</span>
+              <span class="section-action">
+                See All
+                <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </span>
+            </div>
+
+            <div class="pb-grid">
+              <div class="pb-item highlight">
+                <div class="pb-label">500m</div>
+                <div class="pb-value">1:22.4</div>
+              </div>
+              <div class="pb-item highlight">
+                <div class="pb-label">2K</div>
+                <div class="pb-value">6:49.2</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">5K</div>
+                <div class="pb-value">18:32</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">10K</div>
+                <div class="pb-value">38:45</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">1 Min</div>
+                <div class="pb-value">382m</div>
+              </div>
+              <div class="pb-item">
+                <div class="pb-label">HM</div>
+                <div class="pb-value empty">Set PB</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings (abbreviated for light mode) -->
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">Settings</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Notifications</div>
+                </div>
+                <svg class="settings-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Help & Support</div>
+                </div>
+                <svg class="settings-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+              <div class="settings-item">
+                <div class="settings-icon">
+                  <svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="settings-content">
+                  <div class="settings-label">Privacy</div>
+                </div>
+                <svg class="settings-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-version">
+            <div class="app-logo">UTx</div>
+            <div class="app-ver">Version 1.0.0</div>
+          </div>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="tab-label">Feed</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            <span class="tab-label">Workouts</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            <span class="tab-label">Leaderboard</span>
+          </div>
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="tab-label">Profile</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
