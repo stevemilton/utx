@@ -65,6 +65,63 @@ function mapWorkoutType(type: string): WorkoutType {
   return mapping[type] || 'custom';
 }
 
+// Validate and fix common OCR errors
+function validateOcrData(data: any): any {
+  // 1. Check for split confused with time (split should be 80-180 seconds typically)
+  if (data.totalTimeSeconds && data.totalTimeSeconds < 60) {
+    // Total time under 1 minute is almost certainly the split value
+    console.warn('OCR Warning: totalTimeSeconds seems too low, may be split');
+    data.confidence = Math.min(data.confidence || 100, 30);
+  }
+
+  // 2. Check if split seems too high (probably got total time instead)
+  if (data.avgSplit && data.avgSplit > 200) {
+    // Split over 3:20/500m is very slow, might be total time
+    console.warn('OCR Warning: avgSplit seems too high, may be total time');
+    data.confidence = Math.min(data.confidence || 100, 30);
+  }
+
+  // 3. Estimate distance if missing but we have time and split
+  if (!data.totalDistanceMetres && data.totalTimeSeconds && data.avgSplit) {
+    data.estimatedDistanceMetres = Math.round(
+      ((data.totalTimeSeconds / data.avgSplit) * 500) / 10
+    ) * 10; // Round to nearest 10m
+    data.distanceEstimated = true;
+  }
+
+  // 4. Cross-validate distance against time/split calculation
+  if (data.totalDistanceMetres && data.totalTimeSeconds && data.avgSplit) {
+    const expectedDistance = (data.totalTimeSeconds / data.avgSplit) * 500;
+    const variance = Math.abs(data.totalDistanceMetres - expectedDistance) / expectedDistance;
+
+    if (variance > 0.1) {
+      // More than 10% variance - something is wrong
+      console.warn(`OCR Warning: distance doesn't match time/split. Expected ~${Math.round(expectedDistance)}m, got ${data.totalDistanceMetres}m`);
+      data.confidence = Math.min(data.confidence || 100, 50);
+      data.validationWarning = `Distance mismatch: expected ~${Math.round(expectedDistance)}m`;
+    }
+  }
+
+  // 5. Sanity check heart rate
+  if (data.avgHeartRate && (data.avgHeartRate < 40 || data.avgHeartRate > 220)) {
+    data.avgHeartRate = null;
+    data.confidence = Math.min(data.confidence || 100, 70);
+  }
+
+  // 6. Sanity check stroke rate
+  if (data.avgStrokeRate && (data.avgStrokeRate < 14 || data.avgStrokeRate > 50)) {
+    console.warn(`OCR Warning: stroke rate ${data.avgStrokeRate} seems unrealistic`);
+    data.confidence = Math.min(data.confidence || 100, 70);
+  }
+
+  // Ensure confidence is set
+  if (!data.confidence) {
+    data.confidence = 80; // Default confidence if not set by model
+  }
+
+  return data;
+}
+
 // Map distance to PB category
 function distanceToPbCategory(distance: number): PbCategory | null {
   const mapping: Record<number, PbCategory> = {
@@ -757,46 +814,104 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
 
       request.log.info('Sending image to OpenAI GPT-4o Vision...');
 
+      // Comprehensive prompt for Concept2 erg screen OCR
+      const ocrPrompt = `You are extracting workout data from a Concept2 rowing machine (PM5/PM4) display photo.
+
+YOUR TASK: Extract all visible workout metrics and return as JSON.
+
+FIELDS TO EXTRACT:
+{
+  "workoutType": "time" | "distance" | "intervals" | "just_row",
+  "totalDistanceMetres": integer or null,
+  "totalTimeSeconds": float (convert M:SS.s to seconds),
+  "avgSplit": float (in seconds per 500m, convert M:SS.s to seconds),
+  "avgStrokeRate": integer,
+  "avgWatts": integer or null,
+  "avgHeartRate": integer or null,
+  "maxHeartRate": integer or null,
+  "calories": integer or null,
+  "dragFactor": integer or null,
+  "intervals": [
+    {
+      "distanceMetres": integer,
+      "timeSeconds": float,
+      "split": float,
+      "strokeRate": integer,
+      "heartRate": integer or null
+    }
+  ] or null if not an interval workout,
+  "estimatedDistanceMetres": integer or null (calculate if distance shows 0),
+  "confidence": integer 0-100,
+  "rawValues": {
+    "timeDisplay": "string as shown on screen",
+    "splitDisplay": "string as shown on screen",
+    "distanceDisplay": "string as shown on screen"
+  }
+}
+
+CRITICAL RULES:
+
+1. SPLIT vs TIME - Do NOT confuse these:
+   - Split/Pace: Always 1:20 - 3:00 range (per 500m)
+   - Total Time: Always 5:00 - 90:00+ range (whole workout)
+   - If you see "/500m" label, that's the split
+   - If you see "time" label, that's total time
+
+2. DISTANCE SHOWING 0:
+   - If distance displays "0m", this means END of a timed piece
+   - Calculate: estimatedDistanceMetres = (totalTimeSeconds / avgSplit) * 500
+   - Round to nearest 10m
+
+3. INTERVAL WORKOUTS:
+   - Look for "View Detail" or multiple rows of data
+   - Format like "7x500m" indicates intervals
+   - Extract each interval's split, time, stroke rate, HR if visible
+
+4. TIME CONVERSION:
+   - "9:57.5" = 597.5 seconds
+   - "1:51.9" = 111.9 seconds
+   - Always output as float seconds
+
+5. VALIDATION CHECK:
+   - Verify: (totalTimeSeconds / avgSplit) * 500 ≈ totalDistanceMetres (±5%)
+   - If mismatch, flag in confidence score
+
+6. SCREEN TYPES - recognize these:
+   - "Just Row" screen: shows live data, distance counting up
+   - "Workout Summary": shows final totals
+   - "View Detail": shows interval breakdown
+   - "In Progress": shows projected finish time
+
+7. WHAT TO IGNORE:
+   - Button labels (Units, Display, Menu)
+   - PM5 branding
+   - Partial/blurry numbers - return null, don't guess
+
+Return ONLY valid JSON. No explanation or markdown.`;
+
       try {
         const response = await openai.chat.completions.create({
           model: 'gpt-4o',
           messages: [
             {
-              role: 'system',
-              content: `You are an expert at reading Concept2 rowing ergometer screens. Extract workout data from the image and return it as JSON.
-
-The JSON should have these fields (use null if not visible):
-- workoutType: "time" | "distance" | "intervals" | "just_row"
-- totalTimeSeconds: number (convert MM:SS.S to seconds)
-- totalDistanceMetres: number
-- avgSplit: number (in seconds per 500m, convert M:SS.S to seconds)
-- avgStrokeRate: number (strokes per minute)
-- avgWatts: number
-- avgHeartRate: number
-- maxHeartRate: number
-- calories: number
-- dragFactor: number
-- intervals: array of {distanceMetres, timeSeconds, split, strokeRate, watts, heartRate} if interval workout
-
-Only return valid JSON, no other text.`,
-            },
-            {
               role: 'user',
               content: [
+                {
+                  type: 'text',
+                  text: ocrPrompt,
+                },
                 {
                   type: 'image_url',
                   image_url: {
                     url: `data:image/jpeg;base64,${imageBase64}`,
+                    detail: 'high', // Use high detail for small text on erg screens
                   },
-                },
-                {
-                  type: 'text',
-                  text: 'Extract the workout data from this Concept2 erg screen.',
                 },
               ],
             },
           ],
-          max_tokens: 1000,
+          max_tokens: 1500,
+          response_format: { type: 'json_object' }, // Enforce JSON response
         });
 
         const content = response.choices[0]?.message?.content;
@@ -805,14 +920,22 @@ Only return valid JSON, no other text.`,
         }
 
         // Parse the JSON response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error('Could not parse OCR response');
+        let ocrData;
+        try {
+          ocrData = JSON.parse(content);
+        } catch {
+          // Fallback: try to extract JSON from response
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            throw new Error('Could not parse OCR response');
+          }
+          ocrData = JSON.parse(jsonMatch[0]);
         }
 
-        const ocrData = JSON.parse(jsonMatch[0]);
+        // Validate and fix common OCR errors
+        ocrData = validateOcrData(ocrData);
 
-        request.log.info('OCR successful, returning data');
+        request.log.info({ confidence: ocrData.confidence }, 'OCR successful');
 
         return reply.send({
           success: true,
