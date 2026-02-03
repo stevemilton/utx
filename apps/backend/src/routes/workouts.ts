@@ -31,7 +31,6 @@ interface CreateWorkoutBody {
 interface UpdateWorkoutBody {
   notes?: string;
   workoutType?: string;
-  machineType?: 'row' | 'bike' | 'ski';
   workoutDate?: string;
   totalDistanceMetres?: number;
   totalTimeSeconds?: number;
@@ -338,11 +337,26 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.optionalAuth] },
     async (request: FastifyRequest<{ Querystring: GetWorkoutsQuery }>, reply: FastifyReply) => {
       const { limit = 20, cursor, userId } = request.query;
+      const currentUserId = (request as any).userId; // From auth middleware
 
       const where: any = {};
 
+      // If userId is provided, filter by that user
+      // Otherwise, default to the authenticated user's workouts
       if (userId) {
         where.userId = userId;
+      } else if (currentUserId) {
+        where.userId = currentUserId;
+      } else {
+        // No auth and no userId specified - return empty to prevent data leak
+        return reply.send({
+          success: true,
+          data: {
+            workouts: [],
+            nextCursor: null,
+            hasMore: false,
+          },
+        });
       }
 
       if (cursor) {
@@ -565,7 +579,20 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     ) => {
       const { workoutId } = request.params;
       const userId = request.authUser!.id;
-      const body = request.body;
+      const {
+        notes,
+        workoutType,
+        workoutDate,
+        totalDistanceMetres,
+        totalTimeSeconds,
+        avgSplit,
+        avgStrokeRate,
+        avgWatts,
+        avgHeartRate,
+        maxHeartRate,
+        calories,
+        dragFactor,
+      } = request.body;
 
       const existing = await server.prisma.workout.findUnique({
         where: { id: workoutId },
@@ -585,75 +612,88 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         });
       }
 
-      // Build update data - only include fields that were provided
-      const updateData: any = {};
+      // Build update data object with only provided fields
+      const updateData: Record<string, unknown> = {};
 
-      if (body.notes !== undefined) updateData.notes = body.notes;
-      if (body.workoutType) updateData.workoutType = mapWorkoutType(body.workoutType);
-      if (body.machineType) updateData.machineType = mapMachineType(body.machineType);
-      if (body.workoutDate) updateData.workoutDate = new Date(body.workoutDate);
-      if (body.totalDistanceMetres !== undefined) updateData.totalDistanceMetres = body.totalDistanceMetres;
-      if (body.totalTimeSeconds !== undefined) updateData.totalTimeSeconds = body.totalTimeSeconds;
-      if (body.avgSplit !== undefined) updateData.averageSplitSeconds = body.avgSplit;
-      if (body.avgStrokeRate !== undefined) updateData.averageRate = body.avgStrokeRate;
-      if (body.avgWatts !== undefined) updateData.averageWatts = body.avgWatts;
-      if (body.avgHeartRate !== undefined) updateData.avgHeartRate = body.avgHeartRate;
-      if (body.maxHeartRate !== undefined) updateData.maxHeartRate = body.maxHeartRate;
-      if (body.calories !== undefined) updateData.calories = body.calories;
-      if (body.dragFactor !== undefined) updateData.dragFactor = body.dragFactor;
+      if (notes !== undefined) updateData.notes = notes;
+      if (workoutType !== undefined) updateData.workoutType = mapWorkoutType(workoutType);
+      if (workoutDate !== undefined) updateData.workoutDate = new Date(workoutDate);
+      if (totalDistanceMetres !== undefined) updateData.totalDistanceMetres = totalDistanceMetres;
+      if (totalTimeSeconds !== undefined) updateData.totalTimeSeconds = totalTimeSeconds;
+      if (avgSplit !== undefined) updateData.averageSplitSeconds = avgSplit;
+      if (avgStrokeRate !== undefined) updateData.averageRate = avgStrokeRate;
+      if (avgWatts !== undefined) updateData.averageWatts = avgWatts;
+      if (avgHeartRate !== undefined) updateData.avgHeartRate = avgHeartRate;
+      if (maxHeartRate !== undefined) updateData.maxHeartRate = maxHeartRate;
+      if (calories !== undefined) updateData.calories = calories;
+      if (dragFactor !== undefined) updateData.dragFactor = dragFactor;
 
-      // If time/distance/split changed, recalculate effort score
-      if (body.totalTimeSeconds !== undefined || body.totalDistanceMetres !== undefined ||
-          body.avgHeartRate !== undefined || body.avgStrokeRate !== undefined) {
-        // Get user for effort recalculation
+      // Recalculate effort score if metrics changed
+      const metricsChanged = totalTimeSeconds !== undefined ||
+        totalDistanceMetres !== undefined ||
+        avgHeartRate !== undefined ||
+        maxHeartRate !== undefined ||
+        avgStrokeRate !== undefined;
+
+      if (metricsChanged) {
+        // Get user for effort score calculation
         const user = await server.prisma.user.findUnique({
           where: { id: userId },
           select: { maxHr: true, restingHr: true, heightCm: true, weightKg: true, birthDate: true },
         });
 
-        if (user) {
-          const age = user.birthDate
-            ? Math.floor((Date.now() - new Date(user.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-            : 30;
+        // Calculate age from birthDate
+        const age = user?.birthDate
+          ? Math.floor((Date.now() - new Date(user.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          : 30;
 
-          const userProfile: UserProfile = {
-            age,
-            weightKg: user.weightKg || 75,
-            heightCm: user.heightCm || 175,
-            maxHr: user.maxHr || 190,
-            restingHr: user.restingHr || 50,
-          };
+        // Build user profile for UTx effort calculation
+        const userProfile: UserProfile = {
+          age,
+          weightKg: user?.weightKg || 75,
+          heightCm: user?.heightCm || 175,
+          maxHr: user?.maxHr || 190,
+          restingHr: user?.restingHr || 50,
+        };
 
-          const finalDistance = body.totalDistanceMetres ?? existing.totalDistanceMetres;
-          const finalTime = body.totalTimeSeconds ?? existing.totalTimeSeconds;
-          const finalHr = body.avgHeartRate ?? existing.avgHeartRate;
-          const finalRate = body.avgStrokeRate ?? existing.averageRate;
+        // Use new values if provided, otherwise use existing
+        const finalTimeSeconds = totalTimeSeconds ?? existing.totalTimeSeconds;
+        const finalDistanceMetres = totalDistanceMetres ?? existing.totalDistanceMetres;
+        const finalAvgHeartRate = avgHeartRate ?? existing.avgHeartRate;
+        const finalAvgStrokeRate = avgStrokeRate ?? existing.averageRate;
 
-          const intervals: Interval[] = [{
-            distanceMetres: finalDistance,
-            timeSeconds: finalTime,
-            avgHeartRate: finalHr || undefined,
-            strokeRate: finalRate || undefined,
-          }];
+        // Build intervals array for effort calculation
+        const intervals: Interval[] = [{
+          distanceMetres: finalDistanceMetres,
+          timeSeconds: finalTimeSeconds,
+          avgHeartRate: finalAvgHeartRate ?? undefined,
+          strokeRate: finalAvgStrokeRate ?? undefined,
+        }];
 
-          const utxResult = calculateUtxEffortScore(userProfile, intervals);
-          updateData.effortPoints = utxResult.effortPoints;
-          updateData.effortZone = utxResult.zone;
-          updateData.effortBreakdown = utxResult.breakdown;
+        // Calculate UTx Effort Score (0-100 EP)
+        const utxResult = calculateUtxEffortScore(userProfile, intervals);
 
-          // Also recalculate legacy effort score
-          const effortScore = user.maxHr
-            ? calculateEffortScore({
-                avgHeartRate: finalHr || null,
-                maxHeartRate: body.maxHeartRate ?? existing.maxHeartRate,
-                userMaxHr: user.maxHr,
-                totalTimeSeconds: finalTime,
-                workoutType: updateData.workoutType || existing.workoutType,
-              })
-            : existing.effortScore;
+        // Also calculate legacy effort score (0-10) for backward compatibility
+        const effortScore = user?.maxHr
+          ? calculateEffortScore({
+              avgHeartRate: finalAvgHeartRate,
+              maxHeartRate: maxHeartRate ?? existing.maxHeartRate,
+              userMaxHr: user.maxHr,
+              totalTimeSeconds: finalTimeSeconds,
+              workoutType: workoutType ? mapWorkoutType(workoutType) : existing.workoutType,
+            })
+          : calculateEffortScore({
+              avgHeartRate: null,
+              maxHeartRate: null,
+              userMaxHr: 180,
+              totalTimeSeconds: finalTimeSeconds,
+              workoutType: workoutType ? mapWorkoutType(workoutType) : existing.workoutType,
+            });
 
-          updateData.effortScore = effortScore;
-        }
+        updateData.effortScore = effortScore;
+        updateData.effortPoints = utxResult.effortPoints;
+        updateData.effortZone = utxResult.zone;
+        updateData.effortBreakdown = utxResult.breakdown as any;
       }
 
       const workout = await server.prisma.workout.update({

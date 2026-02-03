@@ -1254,6 +1254,44 @@ export const WorkoutDetailScreen: React.FC = () => {
     }
   };
 
+  // Check if current user owns this workout
+  const isOwner = workout?.user?.id === user?.id;
+
+  const handleEdit = () => {
+    if (!workout) return;
+    navigation.navigate('WorkoutEdit', { workoutId: workout.id });
+  };
+
+  const handleDelete = () => {
+    if (!workout) return;
+    Alert.alert(
+      'Delete Workout',
+      'Are you sure you want to delete this workout? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await api.deleteWorkout(workout.id);
+              if (response.success) {
+                Alert.alert('Deleted', 'Workout deleted successfully.', [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+              } else {
+                Alert.alert('Error', response.error || 'Failed to delete workout');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete workout');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -1337,7 +1375,7 @@ export const WorkoutDetailScreen: React.FC = () => {
           {isOwner && (
             <>
               <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
-                <Ionicons name="create-outline" size={22} color={colors.textPrimary} />
+                <Ionicons name="pencil-outline" size={22} color={colors.textPrimary} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleDelete} style={styles.headerButton}>
                 <Ionicons name="trash-outline" size={22} color={colors.error} />
@@ -1622,6 +1660,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
