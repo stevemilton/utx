@@ -16,13 +16,18 @@ interface EmailResult {
  * Send an email using Resend
  */
 async function sendEmail(to: string, subject: string, html: string): Promise<EmailResult> {
+  console.log(`[EMAIL] Attempting to send email to: ${to}, subject: ${subject}`);
+  console.log(`[EMAIL] RESEND_API_KEY configured: ${!!process.env.RESEND_API_KEY}`);
+  console.log(`[EMAIL] FROM_EMAIL: ${FROM_EMAIL}`);
+
   if (!resend) {
-    console.warn('RESEND_API_KEY not set - email not sent');
+    console.error('[EMAIL] RESEND_API_KEY not set - email not sent');
     return { success: false, error: 'Email service not configured' };
   }
 
   try {
-    const { error } = await resend.emails.send({
+    console.log('[EMAIL] Calling Resend API...');
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject,
@@ -30,14 +35,16 @@ async function sendEmail(to: string, subject: string, html: string): Promise<Ema
     });
 
     if (error) {
-      console.error('Resend error:', error);
+      console.error('[EMAIL] Resend API returned error:', JSON.stringify(error, null, 2));
       return { success: false, error: error.message };
     }
 
+    console.log('[EMAIL] Email sent successfully! Resend response:', JSON.stringify(data, null, 2));
     return { success: true };
-  } catch (err) {
-    console.error('Email send failed:', err);
-    return { success: false, error: 'Failed to send email' };
+  } catch (err: any) {
+    console.error('[EMAIL] Email send threw exception:', err?.message || err);
+    console.error('[EMAIL] Full error:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    return { success: false, error: err?.message || 'Failed to send email' };
   }
 }
 

@@ -172,6 +172,186 @@ function getVerificationHtml(success: boolean, message: string): string {
 </html>`;
 }
 
+// Generate HTML page for password reset (form or error)
+function getResetPasswordHtml(token: string | null, error: string | null): string {
+  if (error) {
+    // Show error page
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UTx - Password Reset</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      padding: 20px;
+    }
+    .container { text-align: center; max-width: 400px; }
+    .icon {
+      width: 80px; height: 80px; border-radius: 50%; background: #EF4444;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; margin: 0 auto 24px;
+    }
+    h1 { font-size: 24px; margin-bottom: 12px; }
+    p { color: #a0aec0; line-height: 1.6; margin-bottom: 24px; }
+    .logo { font-size: 32px; font-weight: bold; margin-bottom: 32px; color: #3B82F6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">UTx</div>
+    <div class="icon">✗</div>
+    <h1>Reset Failed</h1>
+    <p>${error}</p>
+  </div>
+</body>
+</html>`;
+  }
+
+  // Show password reset form
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UTx - Reset Password</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      padding: 20px;
+    }
+    .container { text-align: center; max-width: 400px; width: 100%; }
+    .logo { font-size: 32px; font-weight: bold; margin-bottom: 32px; color: #3B82F6; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    .subtitle { color: #a0aec0; margin-bottom: 24px; }
+    form { text-align: left; }
+    label { display: block; color: #a0aec0; font-size: 14px; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 12px 16px; border: 1px solid #374151;
+      border-radius: 8px; background: #1f2937; color: white;
+      font-size: 16px; margin-bottom: 16px;
+    }
+    input:focus { outline: none; border-color: #3B82F6; }
+    .btn {
+      width: 100%; padding: 14px; background: #3B82F6; color: white;
+      border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:hover { background: #2563eb; }
+    .btn:disabled { background: #4b5563; cursor: not-allowed; }
+    .requirements {
+      font-size: 12px; color: #6b7280; margin-bottom: 16px;
+      text-align: left; padding-left: 4px;
+    }
+    .error { color: #EF4444; font-size: 14px; margin-bottom: 16px; display: none; }
+    .success {
+      text-align: center; padding: 40px 20px;
+    }
+    .success .icon {
+      width: 80px; height: 80px; border-radius: 50%; background: #10B981;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; margin: 0 auto 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">UTx</div>
+    <div id="form-container">
+      <h1>Reset Password</h1>
+      <p class="subtitle">Enter your new password below</p>
+      <form id="reset-form">
+        <input type="hidden" name="token" value="${token}">
+        <label for="password">New Password</label>
+        <input type="password" id="password" name="password" required minlength="8" placeholder="Enter new password">
+        <label for="confirmPassword">Confirm Password</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" required minlength="8" placeholder="Confirm new password">
+        <p class="requirements">Password must be at least 8 characters with uppercase, lowercase, and a number.</p>
+        <p class="error" id="error"></p>
+        <button type="submit" class="btn" id="submit-btn">Reset Password</button>
+      </form>
+    </div>
+    <div id="success-container" class="success" style="display: none;">
+      <div class="icon">✓</div>
+      <h1>Password Reset!</h1>
+      <p style="color: #a0aec0;">Your password has been successfully changed.</p>
+      <p style="color: #10B981; margin-top: 16px;">You can close this page and log in with your new password.</p>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById('reset-form');
+    const errorEl = document.getElementById('error');
+    const submitBtn = document.getElementById('submit-btn');
+    const formContainer = document.getElementById('form-container');
+    const successContainer = document.getElementById('success-container');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.style.display = 'none';
+
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const token = form.querySelector('input[name="token"]').value;
+
+      if (password !== confirmPassword) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\\d/.test(password)) {
+        errorEl.textContent = 'Password must be at least 8 characters with uppercase, lowercase, and a number';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Resetting...';
+
+      try {
+        const res = await fetch('/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          formContainer.style.display = 'none';
+          successContainer.style.display = 'block';
+        } else {
+          errorEl.textContent = data.error || 'Failed to reset password';
+          errorEl.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Reset Password';
+        }
+      } catch (err) {
+        errorEl.textContent = 'An error occurred. Please try again.';
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Reset Password';
+      }
+    });
+  </script>
+</body>
+</html>`;
+}
+
 // Apple JWKS client for verifying Apple identity tokens
 const appleJwksClient = jwksClient({
   jwksUri: 'https://appleid.apple.com/auth/keys',
@@ -543,8 +723,16 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
         });
 
         // Send verification email
-        await sendVerificationEmail(normalizedEmail, name.trim(), verificationToken);
+        request.log.info({ email: normalizedEmail }, 'Sending verification email...');
+        const emailResult = await sendVerificationEmail(normalizedEmail, name.trim(), verificationToken);
 
+        if (emailResult.success) {
+          request.log.info({ email: normalizedEmail }, 'Verification email sent successfully');
+        } else {
+          request.log.error({ email: normalizedEmail, error: emailResult.error }, 'Failed to send verification email');
+        }
+
+        // Always return success to avoid revealing if email exists (security best practice)
         return reply.send({
           success: true,
           message: 'If this email is not registered, you will receive a verification email shortly.',
@@ -820,7 +1008,35 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
     }
   );
 
-  // Reset password with token
+  // Reset password - GET handler for email links (returns HTML form)
+  server.get<{ Querystring: { token: string } }>(
+    '/reset-password',
+    async (request: FastifyRequest<{ Querystring: { token: string } }>, reply: FastifyReply) => {
+      const { token } = request.query;
+
+      // Verify token exists and is valid before showing form
+      if (!token) {
+        return reply.type('text/html').send(getResetPasswordHtml(null, 'No reset token provided'));
+      }
+
+      const user = await server.prisma.user.findFirst({
+        where: { passwordResetToken: token },
+      });
+
+      if (!user) {
+        return reply.type('text/html').send(getResetPasswordHtml(null, 'Invalid or expired reset link'));
+      }
+
+      if (user.passwordResetExpires && new Date() > user.passwordResetExpires) {
+        return reply.type('text/html').send(getResetPasswordHtml(null, 'Reset link has expired. Please request a new one in the app.'));
+      }
+
+      // Show the password reset form
+      return reply.type('text/html').send(getResetPasswordHtml(token, null));
+    }
+  );
+
+  // Reset password - POST handler for form submission
   server.post<{ Body: ResetPasswordBody }>(
     '/reset-password',
     async (request: FastifyRequest<{ Body: ResetPasswordBody }>, reply: FastifyReply) => {
@@ -938,7 +1154,14 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
         });
 
         // Send verification email
-        await sendVerificationEmail(normalizedEmail, user.name, verificationToken);
+        request.log.info({ email: normalizedEmail }, 'Resending verification email...');
+        const emailResult = await sendVerificationEmail(normalizedEmail, user.name, verificationToken);
+
+        if (emailResult.success) {
+          request.log.info({ email: normalizedEmail }, 'Verification email resent successfully');
+        } else {
+          request.log.error({ email: normalizedEmail, error: emailResult.error }, 'Failed to resend verification email');
+        }
 
         return reply.send(successResponse);
       } catch (error) {
