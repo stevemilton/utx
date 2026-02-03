@@ -4,15 +4,31 @@
 
 ### Deployment Commands
 ```bash
-# Backend Deploy (Railway)
-cd apps/backend
-railway link --project zonal-reverence --environment production
-railway up --service api --detach
+# Backend Deploy (Railway) - AUTO-DEPLOYS FROM GITHUB
+# Railway watches the `main` branch and auto-deploys when pushed
+# Service name is "utx" (not "api")
+# Root directory configured as "apps/backend" in Railway dashboard
+git checkout main
+git merge <feature-branch>
+git push origin main
+# Railway will auto-deploy within ~2 minutes
+
+# Manual redeploy (if needed):
+# Go to Railway Dashboard → utx service → Deployments → Redeploy
 
 # iOS Build & TestFlight Submit
 cd apps/mobile
 eas build --platform ios --profile production --non-interactive --auto-submit
 ```
+
+### CRITICAL: Railway Deployment
+**DO NOT use `railway up` CLI command** - it fails with "Could not find root directory: apps/backend"
+
+Railway is configured for **GitHub auto-deploy**:
+- Watches `main` branch on `stevemilton/utx` repo
+- Root directory: `apps/backend` (configured in Railway dashboard)
+- Service name: `utx` (NOT "api")
+- Auto-deploys when `main` is pushed
 
 ### Key URLs
 - **Railway Dashboard**: https://railway.com/project/02eb8439-e51a-4d38-8dca-4358a8a67046

@@ -68,10 +68,11 @@ function mapWorkoutType(type: string): WorkoutType {
 // Validate and fix common OCR errors
 function validateOcrData(data: any): any {
   // 1. Check for split confused with time (split should be 80-180 seconds typically)
-  if (data.totalTimeSeconds && data.totalTimeSeconds < 60) {
-    // Total time under 1 minute is almost certainly the split value
+  if (data.totalTimeSeconds && data.totalTimeSeconds < 120) {
+    // Total time under 2 minutes is almost certainly the split value
     console.warn('OCR Warning: totalTimeSeconds seems too low, may be split');
     data.confidence = Math.min(data.confidence || 100, 30);
+    data.validationWarning = 'Time seems too short. May be confused with split.';
   }
 
   // 2. Check if split seems too high (probably got total time instead)
@@ -79,36 +80,49 @@ function validateOcrData(data: any): any {
     // Split over 3:20/500m is very slow, might be total time
     console.warn('OCR Warning: avgSplit seems too high, may be total time');
     data.confidence = Math.min(data.confidence || 100, 30);
+    data.validationWarning = 'Split seems too slow. May be confused with time.';
   }
 
-  // 3. Estimate distance if missing but we have time and split
-  if (!data.totalDistanceMetres && data.totalTimeSeconds && data.avgSplit) {
+  // 3. Auto-swap if split > total time (they're definitely confused)
+  if (data.avgSplit && data.totalTimeSeconds) {
+    if (data.avgSplit > data.totalTimeSeconds) {
+      console.warn('OCR: Auto-swapping split and time (split was greater than total time)');
+      const temp = data.avgSplit;
+      data.avgSplit = data.totalTimeSeconds;
+      data.totalTimeSeconds = temp;
+      data.wasSwapped = true;
+      data.confidence = Math.min(data.confidence || 100, 60);
+    }
+  }
+
+  // 4. Estimate distance if missing but we have time and split
+  if ((!data.totalDistanceMetres || data.totalDistanceMetres === 0) && data.totalTimeSeconds && data.avgSplit) {
     data.estimatedDistanceMetres = Math.round(
       ((data.totalTimeSeconds / data.avgSplit) * 500) / 10
     ) * 10; // Round to nearest 10m
     data.distanceEstimated = true;
   }
 
-  // 4. Cross-validate distance against time/split calculation
+  // 5. Cross-validate distance against time/split calculation
   if (data.totalDistanceMetres && data.totalTimeSeconds && data.avgSplit) {
     const expectedDistance = (data.totalTimeSeconds / data.avgSplit) * 500;
     const variance = Math.abs(data.totalDistanceMetres - expectedDistance) / expectedDistance;
 
-    if (variance > 0.1) {
-      // More than 10% variance - something is wrong
+    if (variance > 0.15) {
+      // More than 15% variance - something is wrong
       console.warn(`OCR Warning: distance doesn't match time/split. Expected ~${Math.round(expectedDistance)}m, got ${data.totalDistanceMetres}m`);
       data.confidence = Math.min(data.confidence || 100, 50);
       data.validationWarning = `Distance mismatch: expected ~${Math.round(expectedDistance)}m`;
     }
   }
 
-  // 5. Sanity check heart rate
+  // 6. Sanity check heart rate
   if (data.avgHeartRate && (data.avgHeartRate < 40 || data.avgHeartRate > 220)) {
     data.avgHeartRate = null;
     data.confidence = Math.min(data.confidence || 100, 70);
   }
 
-  // 6. Sanity check stroke rate
+  // 7. Sanity check stroke rate
   if (data.avgStrokeRate && (data.avgStrokeRate < 14 || data.avgStrokeRate > 50)) {
     console.warn(`OCR Warning: stroke rate ${data.avgStrokeRate} seems unrealistic`);
     data.confidence = Math.min(data.confidence || 100, 70);
