@@ -247,4 +247,63 @@ export async function adminRoutes(fastify: FastifyInstance) {
       })),
     };
   });
+
+  // Test email sending (for debugging)
+  fastify.post<{
+    Body: { to?: string };
+  }>('/test-email', {
+    preHandler: [adminAuth],
+  }, async (request, reply) => {
+    const { to } = request.body || {};
+    const testEmail = to || process.env.ADMIN_EMAIL || 'clubs@polarindustries.co';
+
+    fastify.log.info(`[ADMIN] Testing email to: ${testEmail}`);
+
+    try {
+      const result = await sendClubCreatedNotification(
+        'Test Club Name',
+        'Test Location',
+        'Test Creator',
+        'test@example.com'
+      );
+
+      return {
+        success: true,
+        message: `Test email sent to ${testEmail}`,
+        emailResult: result,
+        config: {
+          resendConfigured: !!process.env.RESEND_API_KEY,
+          fromEmail: process.env.EMAIL_FROM || 'UTx <onboarding@resend.dev>',
+          adminEmail: process.env.ADMIN_EMAIL || 'clubs@polarindustries.co',
+        },
+      };
+    } catch (err: any) {
+      fastify.log.error(err, 'Test email failed');
+      return {
+        success: false,
+        error: err?.message || 'Unknown error',
+        config: {
+          resendConfigured: !!process.env.RESEND_API_KEY,
+          fromEmail: process.env.EMAIL_FROM || 'UTx <onboarding@resend.dev>',
+          adminEmail: process.env.ADMIN_EMAIL || 'clubs@polarindustries.co',
+        },
+      };
+    }
+  });
+
+  // Check email configuration (no actual send)
+  fastify.get('/email-config', {
+    preHandler: [adminAuth],
+  }, async (request, reply) => {
+    return {
+      success: true,
+      config: {
+        resendApiKeySet: !!process.env.RESEND_API_KEY,
+        resendApiKeyPrefix: process.env.RESEND_API_KEY?.substring(0, 8) + '...',
+        fromEmail: process.env.EMAIL_FROM || 'UTx <onboarding@resend.dev> (default)',
+        adminEmail: process.env.ADMIN_EMAIL || 'clubs@polarindustries.co (default)',
+        appUrl: process.env.APP_URL || 'https://utx-production.up.railway.app (default)',
+      },
+    };
+  });
 }
