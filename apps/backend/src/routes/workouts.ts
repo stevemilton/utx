@@ -914,7 +914,21 @@ Return ONLY valid JSON. No explanation or markdown.`;
           response_format: { type: 'json_object' }, // Enforce JSON response
         });
 
+        // Log full OpenAI response metadata
+        request.log.info({
+          openaiResponseId: response.id,
+          model: response.model,
+          finishReason: response.choices[0]?.finish_reason,
+          promptTokens: response.usage?.prompt_tokens,
+          completionTokens: response.usage?.completion_tokens,
+          totalTokens: response.usage?.total_tokens,
+        }, 'OpenAI response metadata');
+
         const content = response.choices[0]?.message?.content;
+
+        // Log the raw content from OpenAI
+        request.log.info({ rawContent: content }, 'OpenAI raw response content');
+
         if (!content) {
           throw new Error('No response from OpenAI');
         }
@@ -923,19 +937,23 @@ Return ONLY valid JSON. No explanation or markdown.`;
         let ocrData;
         try {
           ocrData = JSON.parse(content);
+          request.log.info({ ocrData }, 'Parsed OCR data directly from JSON');
         } catch {
           // Fallback: try to extract JSON from response
           const jsonMatch = content.match(/\{[\s\S]*\}/);
           if (!jsonMatch) {
+            request.log.error({ content }, 'Could not find JSON in OpenAI response');
             throw new Error('Could not parse OCR response');
           }
+          request.log.info({ jsonString: jsonMatch[0] }, 'Extracted JSON from response (fallback)');
           ocrData = JSON.parse(jsonMatch[0]);
+          request.log.info({ ocrData }, 'Parsed OCR data from extracted JSON');
         }
 
         // Validate and fix common OCR errors
         ocrData = validateOcrData(ocrData);
 
-        request.log.info({ confidence: ocrData.confidence }, 'OCR successful');
+        request.log.info({ ocrData, confidence: ocrData.confidence }, 'OCR successful after validation')
 
         return reply.send({
           success: true,
