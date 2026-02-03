@@ -1,5 +1,35 @@
 # UTx Development Notes
 
+## Quick Reference
+
+### Deployment Commands
+```bash
+# Backend Deploy (Railway)
+cd apps/backend
+railway link --project zonal-reverence --environment production
+railway up --service api --detach
+
+# iOS Build & TestFlight Submit
+cd apps/mobile
+eas build --platform ios --profile production --non-interactive --auto-submit
+```
+
+### Key URLs
+- **Railway Dashboard**: https://railway.com/project/02eb8439-e51a-4d38-8dca-4358a8a67046
+- **Railway Project Name**: `zonal-reverence`
+- **Backend URL**: https://utx-production.up.railway.app
+- **EAS Builds**: https://expo.dev/accounts/stevemilton/projects/utx/builds
+- **TestFlight App ID**: 6758580968
+- **EAS Project ID**: e091f145-3f0a-459a-990d-bd18db0d747d
+
+### Git Worktrees
+This project uses multiple git worktrees for parallel development:
+- `loving-visvesvarata` - Earlier feature branch
+- `ecstatic-satoshi` - Earlier feature branch
+- `affectionate-williams` - Current active branch (Build 31+)
+
+---
+
 ## CRITICAL: Authentication in React Native / Expo
 
 **STOP. Before implementing auth, read this.**
@@ -40,30 +70,29 @@ Mobile App                         Backend
 
 ---
 
-## Important Lessons Learned
+## Current Auth Implementation
 
-### Firebase Auth in Expo Managed Workflow
+The app supports THREE auth methods:
+1. **Apple Sign-In**: Uses `expo-apple-authentication` to get identity token
+2. **Google Sign-In**: Uses `expo-auth-session` to get ID token
+3. **Email/Password**: Full flow with email verification and password reset via Resend
 
-**DO NOT use Firebase JS SDK (`firebase/auth`) for authentication in Expo managed workflow.**
+### Email/Password Auth (Added Build 31)
+- **Sign-up**: Email validation, password strength requirements (8+ chars, uppercase, lowercase, number)
+- **Login**: Rate limiting (5 failed attempts → 15min lockout)
+- **Email Verification**: 24-hour expiry tokens sent via Resend
+- **Password Reset**: Secure tokens, 1-hour expiry, sent via Resend
+- **Password Hashing**: bcrypt with cost factor 12
 
-The Firebase JS SDK v9+ requires native modules that don't work in Expo managed workflow. You'll get errors like:
-- "Component auth has not been registered yet"
-- Various native module linking errors
+### Backend Auth Endpoints
+- `POST /auth/register-email` - Register with email/password
+- `POST /auth/login-email` - Login with email/password
+- `POST /auth/verify-email` - Verify email with token
+- `POST /auth/request-reset` - Request password reset
+- `POST /auth/reset-password` - Reset password with token
+- `POST /auth/resend-verification` - Resend verification email
 
-**Solutions:**
-1. **Recommended for MVP**: Skip Firebase Auth on the client. Get Apple/Google tokens directly using `expo-apple-authentication` and `expo-auth-session`, then send them to your backend. The backend can verify tokens using Firebase Admin SDK.
-
-2. **For full Firebase Auth**: Use `@react-native-firebase/auth` which requires ejecting to a bare workflow or using Expo Dev Client with custom native code.
-
-3. **For phone auth specifically**: This is not possible in Expo managed workflow without native modules. Consider backend-based OTP via Twilio or similar.
-
-### Current Auth Implementation
-
-The app uses a simplified auth flow:
-- Apple Sign-In: Uses `expo-apple-authentication` to get identity token
-- Google Sign-In: Uses `expo-auth-session` to get ID token
-- Tokens are sent directly to the backend for verification
-- Phone auth is disabled (shows error message directing users to Apple/Google)
+---
 
 ## Project Structure
 
@@ -71,16 +100,37 @@ The app uses a simplified auth flow:
 - `/apps/backend` - Node.js backend on Railway
 - PRD is source of truth: `UTx PRD v2.pdf`
 
-## Deployment
+### Key Mobile Files
+- `src/screens/auth/` - Auth screens (EmailLogin, EmailSignup, ForgotPassword, ResetPassword, VerifyEmail)
+- `src/screens/main/ProfileScreen.tsx` - Profile with Reset Password modal
+- `src/stores/authStore.ts` - Zustand auth state management
+- `src/services/api.ts` - API service with all endpoints
+- `src/utils/validation.ts` - Email/password validation utilities
 
-- Backend: https://utx-production.up.railway.app
-- TestFlight: App ID 6758580968
-- EAS Project ID: e091f145-3f0a-459a-990d-bd18db0d747d
+### Key Backend Files
+- `src/routes/auth.ts` - All auth endpoints
+- `src/services/email.ts` - Resend email service
+- `prisma/schema.prisma` - Database schema with auth fields
+
+---
 
 ## Environment Variables
 
-Backend requires:
-- `JWT_SECRET` - Secret for signing session JWTs (set in Railway)
+### Backend (Railway)
+- `JWT_SECRET` - Secret for signing session JWTs
 - `FIREBASE_PROJECT_ID` - Firebase project ID
 - `FIREBASE_CLIENT_EMAIL` - Firebase service account email
 - `FIREBASE_PRIVATE_KEY` - Firebase service account private key
+- `RESEND_API_KEY` - Resend API key for transactional emails
+- `DATABASE_URL` - PostgreSQL connection string (auto-set by Railway)
+
+### Mobile (EAS)
+- Environment variables configured in EAS dashboard for production builds
+
+---
+
+## Support URLs (Profile Screen)
+- **Help & FAQ**: https://kind-lotus-435.notion.site/Help-2fcfeff7be008050ba24dc0ab0b51a5e
+- **Privacy Policy**: https://kind-lotus-435.notion.site/Privacy-Policy-2fcfeff7be0080718fccc8b94e22580d
+- **Terms of Service**: https://kind-lotus-435.notion.site/Terms-and-Conditions-2fcfeff7be0080a986f2c832b177ddde
+- **Contact Support**: support@polarindustries.co
