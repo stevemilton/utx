@@ -211,6 +211,7 @@ export const AddWorkoutScreen: React.FC = () => {
   const [dragFactor, setDragFactor] = useState(ocrData?.dragFactor?.toString() || '');
   const [notes, setNotes] = useState('');
   const [isPublic, setIsPublic] = useState(false); // Default to private
+  const [machineType, setMachineType] = useState<'row' | 'bike' | 'ski'>('row');
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(ocrData?.confidence || null);
   const [distanceWasEstimated, setDistanceWasEstimated] = useState(
     ocrData?.distanceEstimated || ocrData?.estimatedDistanceMetres ? true : false
@@ -370,6 +371,7 @@ export const AddWorkoutScreen: React.FC = () => {
 
       const workoutData = {
         workoutType,
+        machineType,
         totalTimeSeconds: timeSeconds,
         totalDistanceMetres: distanceMetres,
         avgSplit: splitSeconds || (timeSeconds / distanceMetres) * 500,
@@ -389,6 +391,7 @@ export const AddWorkoutScreen: React.FC = () => {
           id: `dev-workout-${Date.now()}`,
           userId: 'dev-user-001',
           workoutType,
+          machineType,
           totalTimeSeconds: timeSeconds,
           totalDistanceMetres: distanceMetres,
           averageSplitSeconds: splitSeconds || (timeSeconds / distanceMetres) * 500,
@@ -691,6 +694,36 @@ export const AddWorkoutScreen: React.FC = () => {
                 </View>
               </View>
 
+              {/* Machine Type Selector */}
+              <View style={styles.machineTypeSection}>
+                <View style={styles.machineTypeButtons}>
+                  {(['row', 'bike', 'ski'] as const).map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.machineTypeButton,
+                        machineType === type && styles.machineTypeButtonActive,
+                      ]}
+                      onPress={() => setMachineType(type)}
+                    >
+                      <Ionicons
+                        name={type === 'row' ? 'boat-outline' : type === 'bike' ? 'bicycle-outline' : 'snow-outline'}
+                        size={20}
+                        color={machineType === type ? colors.textInverse : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.machineTypeText,
+                          machineType === type && styles.machineTypeTextActive,
+                        ]}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
               {/* OCR Confidence Indicator */}
               {ocrConfidence && (
                 <View style={[
@@ -771,19 +804,6 @@ export const AddWorkoutScreen: React.FC = () => {
             <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.option} onPress={handleTakePhoto}>
-            <View style={styles.optionIcon}>
-              <Ionicons name="camera" size={28} color={colors.primary} />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>Take Photo</Text>
-              <Text style={styles.optionDescription}>
-                Snap your erg screen and we'll extract the data
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.option} onPress={handleManualEntry}>
             <View style={styles.optionIcon}>
               <Ionicons name="create" size={28} color={colors.primary} />
@@ -796,6 +816,19 @@ export const AddWorkoutScreen: React.FC = () => {
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
+
+          {/* Take Photo - disabled for now */}
+          <View style={[styles.option, styles.optionDisabled]}>
+            <View style={[styles.optionIcon, styles.optionIconDisabled]}>
+              <Ionicons name="camera" size={28} color={colors.textTertiary} />
+            </View>
+            <View style={styles.optionContent}>
+              <Text style={[styles.optionTitle, styles.optionTitleDisabled]}>Take Photo</Text>
+              <Text style={styles.optionDescription}>
+                Coming soon
+              </Text>
+            </View>
+          </View>
 
           {/* Tips */}
           <View style={styles.tips}>
@@ -904,6 +937,15 @@ const styles = StyleSheet.create({
   },
   optionDescription: {
     fontSize: fontSize.sm,
+    color: colors.textTertiary,
+  },
+  optionDisabled: {
+    opacity: 0.5,
+  },
+  optionIconDisabled: {
+    backgroundColor: colors.border,
+  },
+  optionTitleDisabled: {
     color: colors.textTertiary,
   },
   arrow: {
@@ -1124,5 +1166,38 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textTertiary,
     marginTop: 2,
+  },
+  // Machine Type Selector styles
+  machineTypeSection: {
+    marginBottom: spacing.lg,
+  },
+  machineTypeButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  machineTypeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  machineTypeButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  machineTypeText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.textSecondary,
+  },
+  machineTypeTextActive: {
+    color: colors.textInverse,
   },
 });

@@ -154,9 +154,6 @@ export const FeedScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Feed</Text>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
       </View>
 
       {/* Filter tabs */}
@@ -225,14 +222,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.backgroundTertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   filters: {
     flexDirection: 'row',

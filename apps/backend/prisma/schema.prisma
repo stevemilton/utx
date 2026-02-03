@@ -72,6 +72,7 @@ model Workout {
   userId              String
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   workoutType         WorkoutType
+  machineType         MachineType         @default(row)
   totalTimeSeconds    Float
   totalDistanceMetres Int
   averageSplitSeconds Float               // per 500m
@@ -122,6 +123,12 @@ enum WorkoutType {
   steady_state
   intervals
   custom
+}
+
+enum MachineType {
+  row
+  bike
+  ski
 }
 
 // Club model

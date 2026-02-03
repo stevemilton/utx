@@ -267,6 +267,27 @@ class ApiService {
     });
   }
 
+  async updateWorkout(id: string, data: {
+    notes?: string;
+    workoutType?: string;
+    machineType?: 'row' | 'bike' | 'ski';
+    workoutDate?: string;
+    totalDistanceMetres?: number;
+    totalTimeSeconds?: number;
+    avgSplit?: number;
+    avgStrokeRate?: number;
+    avgWatts?: number;
+    avgHeartRate?: number;
+    maxHeartRate?: number;
+    calories?: number;
+    dragFactor?: number;
+  }) {
+    return this.request(ENDPOINTS.workouts.get(id), {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+
   // Feed endpoints
   async getFeed(type: 'all' | 'squad' | 'following' = 'all', params?: { page?: number }) {
     const endpoint =

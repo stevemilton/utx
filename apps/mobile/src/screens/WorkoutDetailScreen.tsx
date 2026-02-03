@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
   Share,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -1177,6 +1178,44 @@ export const WorkoutDetailScreen: React.FC = () => {
 
   const handleClose = () => navigation.goBack();
 
+  // Check if this is the user's own workout
+  const isOwner = workout?.user?.id === user?.id;
+
+  const handleEdit = () => {
+    if (!workout) return;
+    navigation.navigate('WorkoutEdit', { workoutId: workout.id });
+  };
+
+  const handleDelete = () => {
+    if (!workout) return;
+
+    Alert.alert(
+      'Delete Workout',
+      'Are you sure you want to delete this workout? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await api.deleteWorkout(workout.id);
+              if (response.success) {
+                Alert.alert('Deleted', 'Workout has been deleted.');
+                navigation.goBack();
+              } else {
+                Alert.alert('Error', response.error || 'Failed to delete workout');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete workout');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleShare = async () => {
     if (!workout) return;
 
@@ -1294,9 +1333,21 @@ export const WorkoutDetailScreen: React.FC = () => {
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Workout Analysis</Text>
-        <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-          <Ionicons name="share-outline" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {isOwner && (
+            <>
+              <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
+                <Ionicons name="create-outline" size={22} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDelete} style={styles.headerButton}>
+                <Ionicons name="trash-outline" size={22} color={colors.error} />
+              </TouchableOpacity>
+            </>
+          )}
+          <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
+            <Ionicons name="share-outline" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -1320,6 +1371,21 @@ export const WorkoutDetailScreen: React.FC = () => {
                 <Text style={styles.pbBadgeText}>PB</Text>
               </View>
             )}
+          </View>
+          {/* Machine Type Indicator */}
+          <View style={styles.machineTypeIndicator}>
+            <Ionicons
+              name={
+                workout.machineType === 'bike' ? 'bicycle-outline' :
+                workout.machineType === 'ski' ? 'snow-outline' : 'boat-outline'
+              }
+              size={14}
+              color={colors.textTertiary}
+            />
+            <Text style={styles.machineTypeIndicatorText}>
+              {workout.machineType === 'bike' ? 'Bike' :
+               workout.machineType === 'ski' ? 'Ski' : 'Row'}
+            </Text>
           </View>
           <Text style={styles.dateText}>
             {workout.workoutDate ? formatDate(workout.workoutDate) : formatDate(workout.createdAt)}
@@ -1548,6 +1614,10 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: spacing.sm,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
@@ -1617,6 +1687,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: '#FFF',
+  },
+  machineTypeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: spacing.xs,
+  },
+  machineTypeIndicatorText: {
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
   },
   dateText: {
     fontSize: fontSize.sm,

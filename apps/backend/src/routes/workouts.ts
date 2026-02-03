@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { WorkoutType, PbCategory } from '@prisma/client';
+import { WorkoutType, PbCategory, MachineType } from '@prisma/client';
 import OpenAI from 'openai';
 import { calculateEffortScore, calculateUtxEffortScore, type UserProfile, type Interval } from '../utils/effortScore.js';
 import { generateCoachingInsight } from '../utils/aiCoaching.js';
@@ -11,6 +11,7 @@ const openai = new OpenAI({
 interface CreateWorkoutBody {
   photoUrl?: string;
   workoutType: string;
+  machineType?: 'row' | 'bike' | 'ski';
   totalTimeSeconds: number;
   totalDistanceMetres: number;
   avgSplit: number;
@@ -24,10 +25,23 @@ interface CreateWorkoutBody {
   hrData?: object;
   notes?: string;
   workoutDate?: string;
+  isPublic?: boolean;
 }
 
 interface UpdateWorkoutBody {
   notes?: string;
+  workoutType?: string;
+  machineType?: 'row' | 'bike' | 'ski';
+  workoutDate?: string;
+  totalDistanceMetres?: number;
+  totalTimeSeconds?: number;
+  avgSplit?: number;
+  avgStrokeRate?: number;
+  avgWatts?: number;
+  avgHeartRate?: number;
+  maxHeartRate?: number;
+  calories?: number;
+  dragFactor?: number;
 }
 
 interface GetWorkoutsQuery {
@@ -63,6 +77,13 @@ function mapWorkoutType(type: string): WorkoutType {
     'custom': 'custom',
   };
   return mapping[type] || 'custom';
+}
+
+// Map string machine types to enum
+function mapMachineType(type?: string): MachineType {
+  if (type === 'bike') return 'bike';
+  if (type === 'ski') return 'ski';
+  return 'row'; // default
 }
 
 // Validate and fix common OCR errors
@@ -264,6 +285,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
           userId,
           photoUrl: data.photoUrl,
           workoutType: mapWorkoutType(data.workoutType),
+          machineType: mapMachineType(data.machineType),
           totalTimeSeconds: data.totalTimeSeconds,
           totalDistanceMetres: data.totalDistanceMetres,
           averageSplitSeconds: data.avgSplit,
@@ -543,7 +565,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     ) => {
       const { workoutId } = request.params;
       const userId = request.authUser!.id;
-      const { notes } = request.body;
+      const body = request.body;
 
       const existing = await server.prisma.workout.findUnique({
         where: { id: workoutId },
@@ -563,9 +585,80 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         });
       }
 
+      // Build update data - only include fields that were provided
+      const updateData: any = {};
+
+      if (body.notes !== undefined) updateData.notes = body.notes;
+      if (body.workoutType) updateData.workoutType = mapWorkoutType(body.workoutType);
+      if (body.machineType) updateData.machineType = mapMachineType(body.machineType);
+      if (body.workoutDate) updateData.workoutDate = new Date(body.workoutDate);
+      if (body.totalDistanceMetres !== undefined) updateData.totalDistanceMetres = body.totalDistanceMetres;
+      if (body.totalTimeSeconds !== undefined) updateData.totalTimeSeconds = body.totalTimeSeconds;
+      if (body.avgSplit !== undefined) updateData.averageSplitSeconds = body.avgSplit;
+      if (body.avgStrokeRate !== undefined) updateData.averageRate = body.avgStrokeRate;
+      if (body.avgWatts !== undefined) updateData.averageWatts = body.avgWatts;
+      if (body.avgHeartRate !== undefined) updateData.avgHeartRate = body.avgHeartRate;
+      if (body.maxHeartRate !== undefined) updateData.maxHeartRate = body.maxHeartRate;
+      if (body.calories !== undefined) updateData.calories = body.calories;
+      if (body.dragFactor !== undefined) updateData.dragFactor = body.dragFactor;
+
+      // If time/distance/split changed, recalculate effort score
+      if (body.totalTimeSeconds !== undefined || body.totalDistanceMetres !== undefined ||
+          body.avgHeartRate !== undefined || body.avgStrokeRate !== undefined) {
+        // Get user for effort recalculation
+        const user = await server.prisma.user.findUnique({
+          where: { id: userId },
+          select: { maxHr: true, restingHr: true, heightCm: true, weightKg: true, birthDate: true },
+        });
+
+        if (user) {
+          const age = user.birthDate
+            ? Math.floor((Date.now() - new Date(user.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : 30;
+
+          const userProfile: UserProfile = {
+            age,
+            weightKg: user.weightKg || 75,
+            heightCm: user.heightCm || 175,
+            maxHr: user.maxHr || 190,
+            restingHr: user.restingHr || 50,
+          };
+
+          const finalDistance = body.totalDistanceMetres ?? existing.totalDistanceMetres;
+          const finalTime = body.totalTimeSeconds ?? existing.totalTimeSeconds;
+          const finalHr = body.avgHeartRate ?? existing.avgHeartRate;
+          const finalRate = body.avgStrokeRate ?? existing.averageRate;
+
+          const intervals: Interval[] = [{
+            distanceMetres: finalDistance,
+            timeSeconds: finalTime,
+            avgHeartRate: finalHr || undefined,
+            strokeRate: finalRate || undefined,
+          }];
+
+          const utxResult = calculateUtxEffortScore(userProfile, intervals);
+          updateData.effortPoints = utxResult.effortPoints;
+          updateData.effortZone = utxResult.zone;
+          updateData.effortBreakdown = utxResult.breakdown;
+
+          // Also recalculate legacy effort score
+          const effortScore = user.maxHr
+            ? calculateEffortScore({
+                avgHeartRate: finalHr || null,
+                maxHeartRate: body.maxHeartRate ?? existing.maxHeartRate,
+                userMaxHr: user.maxHr,
+                totalTimeSeconds: finalTime,
+                workoutType: updateData.workoutType || existing.workoutType,
+              })
+            : existing.effortScore;
+
+          updateData.effortScore = effortScore;
+        }
+      }
+
       const workout = await server.prisma.workout.update({
         where: { id: workoutId },
-        data: { notes },
+        data: updateData,
         include: {
           user: {
             select: {

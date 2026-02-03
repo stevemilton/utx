@@ -39,6 +39,7 @@ export interface Workout {
   id: string;
   userId: string;
   workoutType: string;
+  machineType?: 'row' | 'bike' | 'ski';
   totalTimeSeconds: number;
   totalDistanceMetres: number;
   averageSplitSeconds: number;

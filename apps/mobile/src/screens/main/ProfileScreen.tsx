@@ -22,26 +22,12 @@ import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../services/api';
 import type { MainTabScreenProps } from '../../navigation/types';
 
-interface PersonalBest {
-  category: string;
-  timeSeconds?: number;
-  distanceMetres?: number;
-  achievedAt: string;
-}
-
 interface Club {
   id: string;
   name: string;
   location?: string;
   memberCount: number;
 }
-
-// Format time helper
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
-};
 
 // Mask email helper (e.g., s***e@example.com)
 const maskEmail = (email: string): string => {
@@ -55,7 +41,6 @@ const maskEmail = (email: string): string => {
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<MainTabScreenProps<'Profile'>['navigation']>();
   const { user, logout, updateProfile } = useAuthStore();
-  const [pbs, setPbs] = useState<PersonalBest[]>([]);
 
   // Settings state
   const [stravaConnected, setStravaConnected] = useState(false);
@@ -77,21 +62,9 @@ export const ProfileScreen: React.FC = () => {
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPbs();
     checkStravaStatus();
     loadUserClubs();
   }, []);
-
-  const loadPbs = async () => {
-    try {
-      const response = await api.getPbs();
-      if (response.success && response.data) {
-        setPbs(response.data as PersonalBest[]);
-      }
-    } catch (error) {
-      console.error('PBs load error:', error);
-    }
-  };
 
   const checkStravaStatus = async () => {
     if (user?.stravaConnected) {
@@ -106,10 +79,6 @@ export const ProfileScreen: React.FC = () => {
 
   const handleEditProfile = () => {
     navigation.navigate('EditProfile');
-  };
-
-  const handlePbPress = (category: string) => {
-    navigation.navigate('PBHistory', { category });
   };
 
   const handleConnectStrava = async () => {
@@ -260,22 +229,6 @@ export const ProfileScreen: React.FC = () => {
     setResetPasswordError(null);
   };
 
-  const pbCategories = [
-    { key: '500m', label: '500m' },
-    { key: '2000m', label: '2K' },
-    { key: '5000m', label: '5K' },
-    { key: '10000m', label: '10K' },
-    { key: '1_minute', label: '1 Min' },
-  ];
-
-  const getPbValue = (category: string): string => {
-    const pb = pbs.find((p) => p.category === category);
-    if (!pb) return '—';
-    if (pb.timeSeconds) return formatTime(pb.timeSeconds);
-    if (pb.distanceMetres) return `${pb.distanceMetres}m`;
-    return '—';
-  };
-
   const SettingRow: React.FC<{
     iconName?: keyof typeof Ionicons.glyphMap;
     title: string;
@@ -379,23 +332,6 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.statValue}>{user?.maxHr || '—'}</Text>
               <Text style={styles.statLabel}>Max HR</Text>
             </View>
-          </View>
-        </View>
-
-        {/* Personal Bests */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Bests</Text>
-          <View style={styles.pbGrid}>
-            {pbCategories.map((cat) => (
-              <TouchableOpacity
-                key={cat.key}
-                style={styles.pbItem}
-                onPress={() => handlePbPress(cat.key)}
-              >
-                <Text style={styles.pbLabel}>{cat.label}</Text>
-                <Text style={styles.pbValue}>{getPbValue(cat.key)}</Text>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 
@@ -842,32 +778,6 @@ const styles = StyleSheet.create({
     ...shadows.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
-  },
-  pbGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  pbItem: {
-    backgroundColor: colors.backgroundTertiary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    minWidth: '30%',
-    flex: 1,
-    alignItems: 'center',
-    ...shadows.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  pbLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textTertiary,
-    marginBottom: spacing.xs,
-  },
-  pbValue: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
   },
   // Clubs styles
   clubsList: {
