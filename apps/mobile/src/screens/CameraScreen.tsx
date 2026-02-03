@@ -30,11 +30,35 @@ export const CameraScreen: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
+  // Cycling loading messages
+  const loadingMessages = [
+    'Reading erg screen...',
+    'Paddling...',
+    'Erging...',
+    'Stretching...',
+    'Settling...',
+    'Please wait...',
+    'Can take 20 seconds...',
+  ];
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
   useEffect(() => {
     if (!permission?.granted) {
       requestPermission();
     }
   }, [permission]);
+
+  // Cycle through loading messages while processing
+  useEffect(() => {
+    if (!isProcessing) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isProcessing]);
 
   const takePicture = async () => {
     if (!cameraRef.current) return;
@@ -197,7 +221,7 @@ export const CameraScreen: React.FC = () => {
           {isProcessing ? (
             <View style={styles.processingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.processingText}>Reading erg screen...</Text>
+              <Text style={styles.processingText}>{loadingMessages[loadingMessageIndex]}</Text>
             </View>
           ) : (
             <>

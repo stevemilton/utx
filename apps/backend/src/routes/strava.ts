@@ -50,6 +50,13 @@ export async function stravaRoutes(fastify: FastifyInstance) {
     authUrl.searchParams.set('scope', 'activity:write,activity:read_all');
     authUrl.searchParams.set('state', state);
 
+    // Log for debugging Strava OAuth issues
+    request.log.info({
+      stravaClientId: STRAVA_CLIENT_ID,
+      stravaRedirectUri: STRAVA_REDIRECT_URI,
+      generatedAuthUrl: authUrl.toString(),
+    }, 'Generating Strava OAuth URL');
+
     return {
       success: true,
       data: {

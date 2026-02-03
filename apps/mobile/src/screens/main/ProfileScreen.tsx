@@ -613,7 +613,13 @@ export const ProfileScreen: React.FC = () => {
           ) : clubSearchQuery.length >= 2 && clubSearchResults.length === 0 ? (
             <View style={styles.emptySearchContainer}>
               <Text style={styles.emptySearchText}>No clubs found</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => {
+                Alert.alert(
+                  'Create a Club',
+                  'Club creation will be available soon! For now, contact us at support@utx.app to request a new club.',
+                  [{ text: 'OK' }]
+                );
+              }}>
                 <Text style={styles.createClubLink}>Request to create a club</Text>
               </TouchableOpacity>
             </View>

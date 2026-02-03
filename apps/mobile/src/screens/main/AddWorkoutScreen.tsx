@@ -171,6 +171,30 @@ export const AddWorkoutScreen: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(photoUri || null);
 
+  // Cycling loading messages
+  const loadingMessages = [
+    'Reading erg screen...',
+    'Paddling...',
+    'Erging...',
+    'Stretching...',
+    'Settling...',
+    'Please wait...',
+    'Can take 20 seconds...',
+  ];
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  // Cycle through loading messages while processing
+  useEffect(() => {
+    if (!isProcessing) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isProcessing]);
+
   // Workout data - handle both old and new OCR field names
   const [workoutType, setWorkoutType] = useState(ocrData?.workoutType || 'distance');
   const [distance, setDistance] = useState(
@@ -729,7 +753,7 @@ export const AddWorkoutScreen: React.FC = () => {
       {isProcessing ? (
         <View style={styles.processingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.processingText}>Reading erg screen...</Text>
+          <Text style={styles.processingText}>{loadingMessages[loadingMessageIndex]}</Text>
         </View>
       ) : (
         <View style={styles.content}>
