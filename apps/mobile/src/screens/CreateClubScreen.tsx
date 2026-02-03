@@ -98,7 +98,7 @@ export const CreateClubScreen: React.FC = () => {
         >
           {/* Info Card */}
           <View style={styles.infoCard}>
-            <Ionicons name="information-circle" size={24} color={colors.primary} />
+            <Ionicons name="information-circle" size={24} color={colors.textInverse} />
             <Text style={styles.infoText}>
               Create a club for your rowing team, school, or group. Once approved, you'll get an invite code to share with members.
             </Text>
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: fontSize.sm,
-    color: colors.textPrimary,
+    color: colors.textInverse,
     lineHeight: 20,
   },
   form: {
