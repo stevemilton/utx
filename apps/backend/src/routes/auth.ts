@@ -2,6 +2,9 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getAuth } from 'firebase-admin/auth';
 import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 
 interface RegisterBody {
   firebaseToken: string;
@@ -20,6 +23,77 @@ interface RegisterBody {
 interface VerifyBody {
   firebaseToken: string;
   provider?: 'apple' | 'google';
+}
+
+// Email/Password Auth interfaces
+interface EmailRegisterBody {
+  email: string;
+  password: string;
+  name: string;
+}
+
+interface EmailLoginBody {
+  email: string;
+  password: string;
+}
+
+interface VerifyEmailBody {
+  token: string;
+}
+
+interface RequestResetBody {
+  email: string;
+}
+
+interface ResetPasswordBody {
+  token: string;
+  password: string;
+}
+
+interface ResendVerificationBody {
+  email: string;
+}
+
+// Constants for rate limiting and token expiry
+const BCRYPT_ROUNDS = 12;
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const VERIFICATION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const RESET_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
+const RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute
+
+// Password validation
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validatePassword(password: string): string | null {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+  if (!/\d/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  return null;
+}
+
+function validateEmail(email: string): string | null {
+  if (!email) {
+    return 'Email is required';
+  }
+  if (!EMAIL_REGEX.test(email)) {
+    return 'Please enter a valid email address';
+  }
+  return null;
+}
+
+function generateSecureToken(): string {
+  return crypto.randomBytes(32).toString('hex');
 }
 
 // Apple JWKS client for verifying Apple identity tokens
@@ -327,6 +401,432 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
         return reply.status(500).send({
           success: false,
           error: 'Failed to delete account',
+        });
+      }
+    }
+  );
+
+  // ============ EMAIL/PASSWORD AUTHENTICATION ============
+
+  // Register with email/password
+  server.post<{ Body: EmailRegisterBody }>(
+    '/register-email',
+    async (request: FastifyRequest<{ Body: EmailRegisterBody }>, reply: FastifyReply) => {
+      const { email, password, name } = request.body;
+
+      try {
+        // Validate inputs
+        const emailError = validateEmail(email);
+        if (emailError) {
+          return reply.status(400).send({ success: false, error: emailError });
+        }
+
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+          return reply.status(400).send({ success: false, error: passwordError });
+        }
+
+        if (!name || name.trim().length < 1) {
+          return reply.status(400).send({ success: false, error: 'Name is required' });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Check if email already exists
+        const existingUser = await server.prisma.user.findFirst({
+          where: { firebaseUid: `email:${normalizedEmail}` },
+        });
+
+        if (existingUser) {
+          // Return generic success to prevent email enumeration
+          // But don't actually create another user
+          return reply.send({
+            success: true,
+            message: 'If this email is not registered, you will receive a verification email shortly.',
+          });
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+        // Generate verification token
+        const verificationToken = generateSecureToken();
+        const verificationExpires = new Date(Date.now() + VERIFICATION_EXPIRY_MS);
+
+        // Create user (not verified yet)
+        await server.prisma.user.create({
+          data: {
+            firebaseUid: `email:${normalizedEmail}`,
+            email: normalizedEmail,
+            name: name.trim(),
+            passwordHash,
+            emailVerified: false,
+            emailVerificationToken: verificationToken,
+            emailVerificationExpires: verificationExpires,
+          },
+        });
+
+        // Send verification email
+        await sendVerificationEmail(normalizedEmail, name.trim(), verificationToken);
+
+        return reply.send({
+          success: true,
+          message: 'If this email is not registered, you will receive a verification email shortly.',
+        });
+      } catch (error) {
+        request.log.error(error, 'Email registration failed');
+        return reply.status(500).send({
+          success: false,
+          error: 'Registration failed. Please try again.',
+        });
+      }
+    }
+  );
+
+  // Verify email
+  server.post<{ Body: VerifyEmailBody }>(
+    '/verify-email',
+    async (request: FastifyRequest<{ Body: VerifyEmailBody }>, reply: FastifyReply) => {
+      const { token } = request.body;
+
+      try {
+        if (!token) {
+          return reply.status(400).send({ success: false, error: 'Verification token is required' });
+        }
+
+        // Find user by verification token
+        const user = await server.prisma.user.findFirst({
+          where: { emailVerificationToken: token },
+        });
+
+        if (!user) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid or expired verification link',
+          });
+        }
+
+        // Check if token expired
+        if (user.emailVerificationExpires && new Date() > user.emailVerificationExpires) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Verification link has expired. Please request a new one.',
+          });
+        }
+
+        // Update user as verified
+        const updatedUser = await server.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            emailVerified: true,
+            emailVerificationToken: null,
+            emailVerificationExpires: null,
+          },
+        });
+
+        // Generate JWT token
+        const jwtToken = server.jwt.sign({ userId: updatedUser.id, provider: 'email' });
+
+        return reply.send({
+          success: true,
+          data: {
+            user: updatedUser,
+            token: jwtToken,
+          },
+        });
+      } catch (error) {
+        request.log.error(error, 'Email verification failed');
+        return reply.status(500).send({
+          success: false,
+          error: 'Verification failed. Please try again.',
+        });
+      }
+    }
+  );
+
+  // Login with email/password
+  server.post<{ Body: EmailLoginBody }>(
+    '/login-email',
+    async (request: FastifyRequest<{ Body: EmailLoginBody }>, reply: FastifyReply) => {
+      const { email, password } = request.body;
+
+      try {
+        // Validate inputs
+        if (!email || !password) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Email and password are required',
+          });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Find user by email
+        const user = await server.prisma.user.findFirst({
+          where: { firebaseUid: `email:${normalizedEmail}` },
+        });
+
+        // Generic error to prevent email enumeration
+        const genericError = { success: false, error: 'Invalid email or password' };
+
+        if (!user) {
+          return reply.status(401).send(genericError);
+        }
+
+        // Check if account is locked
+        if (user.lockoutUntil && new Date() < user.lockoutUntil) {
+          const minutesLeft = Math.ceil((user.lockoutUntil.getTime() - Date.now()) / 60000);
+          return reply.status(429).send({
+            success: false,
+            error: `Too many failed attempts. Please try again in ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}.`,
+          });
+        }
+
+        // Check if email is verified
+        if (!user.emailVerified) {
+          return reply.status(401).send({
+            success: false,
+            error: 'Please verify your email before logging in',
+            code: 'EMAIL_NOT_VERIFIED',
+          });
+        }
+
+        // Check if user has a password (might be OAuth-only user)
+        if (!user.passwordHash) {
+          return reply.status(401).send(genericError);
+        }
+
+        // Verify password
+        const passwordValid = await bcrypt.compare(password, user.passwordHash);
+
+        if (!passwordValid) {
+          // Increment failed attempts
+          const newAttempts = (user.failedLoginAttempts || 0) + 1;
+          const updates: any = { failedLoginAttempts: newAttempts };
+
+          if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+            updates.lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
+          }
+
+          await server.prisma.user.update({
+            where: { id: user.id },
+            data: updates,
+          });
+
+          return reply.status(401).send(genericError);
+        }
+
+        // Success - reset failed attempts
+        const updatedUser = await server.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: 0,
+            lockoutUntil: null,
+          },
+        });
+
+        // Generate JWT token
+        const jwtToken = server.jwt.sign({ userId: updatedUser.id, provider: 'email' });
+
+        return reply.send({
+          success: true,
+          data: {
+            user: updatedUser,
+            token: jwtToken,
+          },
+        });
+      } catch (error) {
+        request.log.error(error, 'Email login failed');
+        return reply.status(500).send({
+          success: false,
+          error: 'Login failed. Please try again.',
+        });
+      }
+    }
+  );
+
+  // Request password reset
+  server.post<{ Body: RequestResetBody }>(
+    '/request-reset',
+    async (request: FastifyRequest<{ Body: RequestResetBody }>, reply: FastifyReply) => {
+      const { email } = request.body;
+
+      try {
+        if (!email) {
+          return reply.status(400).send({ success: false, error: 'Email is required' });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Always return success to prevent email enumeration
+        const successResponse = {
+          success: true,
+          message: 'If an account exists with this email, you will receive a password reset link shortly.',
+        };
+
+        // Find user
+        const user = await server.prisma.user.findFirst({
+          where: { firebaseUid: `email:${normalizedEmail}` },
+        });
+
+        if (!user || !user.passwordHash) {
+          // User doesn't exist or is OAuth-only
+          return reply.send(successResponse);
+        }
+
+        // Generate reset token
+        const resetToken = generateSecureToken();
+        const resetExpires = new Date(Date.now() + RESET_EXPIRY_MS);
+
+        // Update user with reset token
+        await server.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            passwordResetToken: resetToken,
+            passwordResetExpires: resetExpires,
+          },
+        });
+
+        // Send reset email
+        await sendPasswordResetEmail(normalizedEmail, user.name, resetToken);
+
+        return reply.send(successResponse);
+      } catch (error) {
+        request.log.error(error, 'Password reset request failed');
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to process request. Please try again.',
+        });
+      }
+    }
+  );
+
+  // Reset password with token
+  server.post<{ Body: ResetPasswordBody }>(
+    '/reset-password',
+    async (request: FastifyRequest<{ Body: ResetPasswordBody }>, reply: FastifyReply) => {
+      const { token, password } = request.body;
+
+      try {
+        if (!token) {
+          return reply.status(400).send({ success: false, error: 'Reset token is required' });
+        }
+
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+          return reply.status(400).send({ success: false, error: passwordError });
+        }
+
+        // Find user by reset token
+        const user = await server.prisma.user.findFirst({
+          where: { passwordResetToken: token },
+        });
+
+        if (!user) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid or expired reset link',
+          });
+        }
+
+        // Check if token expired
+        if (user.passwordResetExpires && new Date() > user.passwordResetExpires) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Reset link has expired. Please request a new one.',
+          });
+        }
+
+        // Hash new password
+        const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+        // Update password and clear reset token
+        await server.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            passwordHash,
+            passwordResetToken: null,
+            passwordResetExpires: null,
+            failedLoginAttempts: 0,
+            lockoutUntil: null,
+          },
+        });
+
+        return reply.send({
+          success: true,
+          message: 'Password has been reset successfully. You can now log in.',
+        });
+      } catch (error) {
+        request.log.error(error, 'Password reset failed');
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to reset password. Please try again.',
+        });
+      }
+    }
+  );
+
+  // Resend verification email
+  server.post<{ Body: ResendVerificationBody }>(
+    '/resend-verification',
+    async (request: FastifyRequest<{ Body: ResendVerificationBody }>, reply: FastifyReply) => {
+      const { email } = request.body;
+
+      try {
+        if (!email) {
+          return reply.status(400).send({ success: false, error: 'Email is required' });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Always return success to prevent email enumeration
+        const successResponse = {
+          success: true,
+          message: 'If an unverified account exists with this email, you will receive a verification email shortly.',
+        };
+
+        // Find user
+        const user = await server.prisma.user.findFirst({
+          where: { firebaseUid: `email:${normalizedEmail}` },
+        });
+
+        if (!user || user.emailVerified) {
+          return reply.send(successResponse);
+        }
+
+        // Check cooldown - prevent spam
+        if (user.emailVerificationExpires) {
+          const tokenAge = Date.now() - (user.emailVerificationExpires.getTime() - VERIFICATION_EXPIRY_MS);
+          if (tokenAge < RESEND_COOLDOWN_MS) {
+            return reply.status(429).send({
+              success: false,
+              error: 'Please wait a minute before requesting another verification email.',
+            });
+          }
+        }
+
+        // Generate new verification token
+        const verificationToken = generateSecureToken();
+        const verificationExpires = new Date(Date.now() + VERIFICATION_EXPIRY_MS);
+
+        // Update user with new token
+        await server.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            emailVerificationToken: verificationToken,
+            emailVerificationExpires: verificationExpires,
+          },
+        });
+
+        // Send verification email
+        await sendVerificationEmail(normalizedEmail, user.name, verificationToken);
+
+        return reply.send(successResponse);
+      } catch (error) {
+        request.log.error(error, 'Resend verification failed');
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to send verification email. Please try again.',
         });
       }
     }

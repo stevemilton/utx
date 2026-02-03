@@ -30,6 +30,13 @@ export const ENDPOINTS = {
     login: '/auth/login',
     verifyToken: '/auth/verify',
     refreshToken: '/auth/refresh',
+    // Email/Password auth
+    registerEmail: '/auth/register-email',
+    loginEmail: '/auth/login-email',
+    verifyEmail: '/auth/verify-email',
+    requestReset: '/auth/request-reset',
+    resetPassword: '/auth/reset-password',
+    resendVerification: '/auth/resend-verification',
   },
 
   // Users

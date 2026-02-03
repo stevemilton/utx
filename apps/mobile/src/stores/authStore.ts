@@ -7,6 +7,7 @@ export interface UserProfile {
   id: string;
   username?: string;
   name: string;
+  email?: string; // Email for email/password auth users
   avatarUrl?: string;
   heightCm: number;
   weightKg: number;

@@ -36,6 +36,16 @@ model User {
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
+  // Email/Password Authentication
+  passwordHash              String?                   // bcrypt hashed password (null for OAuth users)
+  emailVerified             Boolean             @default(false)
+  emailVerificationToken    String?             @unique
+  emailVerificationExpires  DateTime?
+  passwordResetToken        String?             @unique
+  passwordResetExpires      DateTime?
+  failedLoginAttempts       Int                 @default(0)
+  lockoutUntil              DateTime?
+
   // Relations
   workouts             Workout[]
   clubMemberships      ClubMembership[]

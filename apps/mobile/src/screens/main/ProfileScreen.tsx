@@ -43,6 +43,15 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
 };
 
+// Mask email helper (e.g., s***e@example.com)
+const maskEmail = (email: string): string => {
+  if (!email) return '';
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  if (local.length <= 2) return `${local[0]}***@${domain}`;
+  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+};
+
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<MainTabScreenProps<'Profile'>['navigation']>();
   const { user, logout, updateProfile } = useAuthStore();
@@ -60,6 +69,12 @@ export const ProfileScreen: React.FC = () => {
   const [clubSearchResults, setClubSearchResults] = useState<Club[]>([]);
   const [isSearchingClubs, setIsSearchingClubs] = useState(false);
   const [userClubs, setUserClubs] = useState<Club[]>([]);
+
+  // Reset password modal state
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPbs();
@@ -216,6 +231,33 @@ export const ProfileScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  // Reset password handlers
+  const handleResetPassword = async () => {
+    if (!user?.email) return;
+
+    setIsResettingPassword(true);
+    setResetPasswordError(null);
+
+    try {
+      const response = await api.requestPasswordReset(user.email);
+      if (response.success) {
+        setResetPasswordSuccess(true);
+      } else {
+        setResetPasswordError(response.error || 'Something went wrong. Please try again.');
+      }
+    } catch (error) {
+      setResetPasswordError('Something went wrong. Please try again.');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const handleCloseResetModal = () => {
+    setShowResetPasswordModal(false);
+    setResetPasswordSuccess(false);
+    setResetPasswordError(null);
   };
 
   const pbCategories = [
@@ -472,22 +514,29 @@ export const ProfileScreen: React.FC = () => {
             <SettingRow
               iconName="help-circle-outline"
               title="Help & FAQ"
-              onPress={() => {}}
+              onPress={() => Linking.openURL('https://kind-lotus-435.notion.site/Help-2fcfeff7be008050ba24dc0ab0b51a5e')}
             />
             <SettingRow
               iconName="chatbubble-outline"
               title="Contact Support"
-              onPress={() => {}}
+              onPress={() => Linking.openURL('mailto:support@polarindustries.co')}
             />
+            {user?.email && (
+              <SettingRow
+                iconName="key-outline"
+                title="Reset Password"
+                onPress={() => setShowResetPasswordModal(true)}
+              />
+            )}
             <SettingRow
               iconName="lock-closed-outline"
               title="Privacy Policy"
-              onPress={() => {}}
+              onPress={() => Linking.openURL('https://kind-lotus-435.notion.site/Privacy-Policy-2fcfeff7be0080718fccc8b94e22580d')}
             />
             <SettingRow
               iconName="document-text-outline"
               title="Terms of Service"
-              onPress={() => {}}
+              onPress={() => Linking.openURL('https://kind-lotus-435.notion.site/Terms-and-Conditions-2fcfeff7be0080a986f2c832b177ddde')}
             />
           </View>
         </View>
@@ -585,6 +634,73 @@ export const ProfileScreen: React.FC = () => {
               </Text>
             </View>
           )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal
+        visible={showResetPasswordModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseResetModal}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={handleCloseResetModal}>
+              <Text style={styles.modalClose}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Reset Password</Text>
+            <View style={{ width: 60 }} />
+          </View>
+
+          <View style={styles.resetPasswordContent}>
+            {resetPasswordSuccess ? (
+              // Success State
+              <>
+                <View style={styles.resetSuccessIcon}>
+                  <Ionicons name="checkmark-circle" size={64} color={colors.success} />
+                </View>
+                <Text style={styles.resetTitle}>Reset link sent!</Text>
+                <Text style={styles.resetSubtitle}>
+                  Check your email and follow the link to reset your password.
+                </Text>
+                <TouchableOpacity
+                  style={styles.resetButton}
+                  onPress={handleCloseResetModal}
+                >
+                  <Text style={styles.resetButtonText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              // Initial State
+              <>
+                <View style={styles.resetIcon}>
+                  <Ionicons name="mail-outline" size={48} color={colors.primary} />
+                </View>
+                <Text style={styles.resetTitle}>Reset Password</Text>
+                <Text style={styles.resetSubtitle}>
+                  We'll send a password reset link to:
+                </Text>
+                <Text style={styles.resetEmail}>{maskEmail(user?.email || '')}</Text>
+
+                {resetPasswordError && (
+                  <Text style={styles.resetError}>{resetPasswordError}</Text>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.resetButton, isResettingPassword && styles.resetButtonDisabled]}
+                  onPress={handleResetPassword}
+                  disabled={isResettingPassword}
+                >
+                  {isResettingPassword ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -999,5 +1115,66 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textTertiary,
     textAlign: 'center',
+  },
+  // Reset Password Modal styles
+  resetPasswordContent: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+  },
+  resetIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.primarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+  },
+  resetSuccessIcon: {
+    marginBottom: spacing.xl,
+  },
+  resetTitle: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  resetSubtitle: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  resetEmail: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xl,
+  },
+  resetError: {
+    fontSize: fontSize.sm,
+    color: colors.error,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  resetButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: borderRadius.lg,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  resetButtonDisabled: {
+    opacity: 0.7,
+  },
+  resetButtonText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
   },
 });
