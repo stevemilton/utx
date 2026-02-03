@@ -29,6 +29,7 @@ model User {
   hasCompletedOnboarding Boolean           @default(false)
   isPublic             Boolean             @default(true)
   stravaConnected      Boolean             @default(false)
+  stravaAutoSync       Boolean             @default(true)
   stravaRefreshToken   String?
   stravaAccessToken    String?
   stravaTokenExpiresAt DateTime?
