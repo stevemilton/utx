@@ -29,11 +29,22 @@ model User {
   hasCompletedOnboarding Boolean           @default(false)
   isPublic             Boolean             @default(true)
   stravaConnected      Boolean             @default(false)
+  stravaAutoSync       Boolean             @default(false)
   stravaRefreshToken   String?
   stravaAccessToken    String?
   stravaTokenExpiresAt DateTime?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
+
+  // Email/Password Authentication
+  passwordHash              String?                   // bcrypt hashed password (null for OAuth users)
+  emailVerified             Boolean             @default(false)
+  emailVerificationToken    String?             @unique
+  emailVerificationExpires  DateTime?
+  passwordResetToken        String?             @unique
+  passwordResetExpires      DateTime?
+  failedLoginAttempts       Int                 @default(0)
+  lockoutUntil              DateTime?
 
   // Relations
   workouts             Workout[]

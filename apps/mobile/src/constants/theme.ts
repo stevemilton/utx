@@ -25,6 +25,7 @@ export const colors = {
   // Status colors
   success: '#10B981',
   successLight: 'rgba(16, 185, 129, 0.1)',
+  successSubtle: '#E8F5E9',
   warning: '#F59E0B',
   warningLight: 'rgba(245, 158, 11, 0.1)',
   error: '#EF4444',

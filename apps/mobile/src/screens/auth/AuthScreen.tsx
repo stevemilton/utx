@@ -219,21 +219,31 @@ export const AuthScreen: React.FC = () => {
             )}
           </TouchableOpacity>
 
-          {/* Phone Sign In - Disabled in Expo managed workflow */}
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Email Sign In */}
           <TouchableOpacity
-            style={[styles.socialButton, styles.phoneButton, styles.disabledButton]}
-            onPress={() => Alert.alert(
-              'Phone Auth Unavailable',
-              'Phone authentication is not available. Please use Apple or Google sign-in instead.'
-            )}
+            style={styles.socialButton}
+            onPress={() => navigation.navigate('EmailSignup')}
           >
             <View style={styles.socialIconPlaceholder}>
-              <Ionicons name="phone-portrait-outline" size={18} color={colors.textTertiary} />
+              <Ionicons name="mail-outline" size={18} color={colors.textPrimary} />
             </View>
-            <Text style={[styles.socialButtonText, styles.disabledButtonText]}>
-              Continue with Phone
-            </Text>
+            <Text style={styles.socialButtonText}>Continue with Email</Text>
           </TouchableOpacity>
+
+          {/* Already have account - Login link */}
+          <View style={styles.loginLinkContainer}>
+            <Text style={styles.loginLinkText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('EmailLogin')}>
+              <Text style={styles.loginLinkAction}>Log in</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Dev Login - Only visible in development mode */}
           {isDev && (
@@ -373,5 +383,34 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.medium,
     color: colors.white,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: spacing.md,
+    color: colors.textTertiary,
+    fontSize: fontSize.sm,
+  },
+  loginLinkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  loginLinkText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+  loginLinkAction: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
 });

@@ -8,6 +8,12 @@ export type AuthStackParamList = {
   Auth: undefined;
   PhoneAuth: undefined;
   VerifyCode: { phoneNumber: string };
+  // Email/Password auth screens
+  EmailSignup: undefined;
+  EmailLogin: undefined;
+  VerifyEmail: { email: string };
+  ForgotPassword: undefined;
+  ResetPassword: { token: string };
 };
 
 // Onboarding Stack

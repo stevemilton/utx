@@ -114,6 +114,55 @@ class ApiService {
     });
   }
 
+  // Email/Password Auth endpoints
+  async registerWithEmail(data: { email: string; password: string; name: string }) {
+    return this.request<{ message: string }>(ENDPOINTS.auth.registerEmail, {
+      method: 'POST',
+      body: data,
+      skipAuth: true,
+    });
+  }
+
+  async loginWithEmail(email: string, password: string) {
+    return this.request<{ user: Record<string, unknown>; token: string }>(ENDPOINTS.auth.loginEmail, {
+      method: 'POST',
+      body: { email, password },
+      skipAuth: true,
+    });
+  }
+
+  async verifyEmail(token: string) {
+    return this.request<{ user: Record<string, unknown>; token: string }>(ENDPOINTS.auth.verifyEmail, {
+      method: 'POST',
+      body: { token },
+      skipAuth: true,
+    });
+  }
+
+  async requestPasswordReset(email: string) {
+    return this.request<{ message: string }>(ENDPOINTS.auth.requestReset, {
+      method: 'POST',
+      body: { email },
+      skipAuth: true,
+    });
+  }
+
+  async resetPassword(token: string, password: string) {
+    return this.request<{ message: string }>(ENDPOINTS.auth.resetPassword, {
+      method: 'POST',
+      body: { token, password },
+      skipAuth: true,
+    });
+  }
+
+  async resendVerificationEmail(email: string) {
+    return this.request<{ message: string }>(ENDPOINTS.auth.resendVerification, {
+      method: 'POST',
+      body: { email },
+      skipAuth: true,
+    });
+  }
+
   // User endpoints
   async getMe() {
     return this.request(ENDPOINTS.users.me);
