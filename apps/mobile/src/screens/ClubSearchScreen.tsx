@@ -34,6 +34,9 @@ export const ClubSearchScreen: React.FC = () => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
+  const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [isJoiningByCode, setIsJoiningByCode] = useState(false);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -96,6 +99,44 @@ export const ClubSearchScreen: React.FC = () => {
     }
   };
 
+  const handleJoinByCode = async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert('Invalid Code', 'Please enter an invite code.');
+      return;
+    }
+
+    try {
+      setIsJoiningByCode(true);
+      const response = await api.joinClubByCode(inviteCode.trim().toUpperCase());
+
+      if (response.success) {
+        setShowInviteCodeModal(false);
+        setInviteCode('');
+        Alert.alert(
+          'Welcome! 🎉',
+          `You've joined ${response.data?.clubName || 'the club'}!`,
+          [{
+            text: 'View Club',
+            onPress: () => {
+              if (response.data?.clubId) {
+                navigation.navigate('ClubDetail', { clubId: response.data.clubId });
+              } else {
+                navigation.goBack();
+              }
+            }
+          }]
+        );
+      } else {
+        Alert.alert('Error', response.error || 'Invalid invite code. Please check and try again.');
+      }
+    } catch (error: any) {
+      console.error('Join by code error:', error);
+      Alert.alert('Error', error.message || 'Failed to join club. Please try again.');
+    } finally {
+      setIsJoiningByCode(false);
+    }
+  };
+
   const renderClubItem = ({ item }: { item: Club }) => (
     <TouchableOpacity
       style={[styles.clubItem, selectedClub?.id === item.id && styles.clubItemSelected]}
@@ -137,6 +178,15 @@ export const ClubSearchScreen: React.FC = () => {
         <Text style={styles.subtitle}>
           Search for your rowing club to request membership
         </Text>
+
+        {/* Invite code link */}
+        <TouchableOpacity
+          style={styles.inviteCodeLink}
+          onPress={() => setShowInviteCodeModal(true)}
+        >
+          <Ionicons name="key-outline" size={18} color={colors.primary} />
+          <Text style={styles.inviteCodeLinkText}>Have an invite code?</Text>
+        </TouchableOpacity>
 
         {/* Search */}
         <Input
@@ -242,6 +292,56 @@ export const ClubSearchScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Invite Code Modal */}
+      <Modal
+        visible={showInviteCodeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInviteCodeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Enter Invite Code</Text>
+            <Text style={styles.modalSubtitle}>
+              Get this code from your club admin or teammate
+            </Text>
+
+            <TextInput
+              style={styles.inviteCodeInput}
+              placeholder="e.g., ABC12345"
+              placeholderTextColor={colors.textTertiary}
+              value={inviteCode}
+              onChangeText={(text) => setInviteCode(text.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={10}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowInviteCodeModal(false);
+                  setInviteCode('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalSubmitButton, isJoiningByCode && styles.modalButtonDisabled]}
+                onPress={handleJoinByCode}
+                disabled={isJoiningByCode}
+              >
+                <Text style={styles.modalSubmitText}>
+                  {isJoiningByCode ? 'Joining...' : 'Join Club'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -272,8 +372,19 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     lineHeight: 24,
+  },
+  inviteCodeLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  inviteCodeLinkText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
   },
   listContent: {
     paddingTop: spacing.sm,
@@ -455,5 +566,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.textInverse,
+  },
+  modalButtonDisabled: {
+    opacity: 0.6,
+  },
+  inviteCodeInput: {
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fontSize.xl,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    letterSpacing: 2,
+    fontWeight: fontWeight.bold,
   },
 });

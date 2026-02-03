@@ -614,11 +614,8 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.emptySearchContainer}>
               <Text style={styles.emptySearchText}>No clubs found</Text>
               <TouchableOpacity onPress={() => {
-                Alert.alert(
-                  'Create a Club',
-                  'Club creation will be available soon! For now, contact us at support@utx.app to request a new club.',
-                  [{ text: 'OK' }]
-                );
+                setShowClubModal(false);
+                navigation.navigate('CreateClub');
               }}>
                 <Text style={styles.createClubLink}>Request to create a club</Text>
               </TouchableOpacity>

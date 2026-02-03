@@ -197,3 +197,324 @@ export async function sendPasswordResetEmail(
 
   return sendEmail(email, 'Reset your UTx password', html);
 }
+
+// ============================================
+// CLUB NOTIFICATION EMAILS
+// ============================================
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'clubs@polarindustries.co';
+
+/**
+ * Send notification to admin when a new club is created (for verification)
+ */
+export async function sendClubCreatedNotification(
+  clubName: string,
+  clubLocation: string | null,
+  creatorName: string,
+  creatorEmail: string | null
+): Promise<EmailResult> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Club Pending Verification</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="background-color: #0D4F4F; padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">UTx Admin</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="color: #1A1A1A; margin: 0 0 20px 0; font-size: 24px;">New Club Pending Verification</h2>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                A new club has been created and needs verification:
+              </p>
+              <table style="width: 100%; margin-bottom: 20px;">
+                <tr>
+                  <td style="color: #9CA3AF; padding: 8px 0;">Club Name:</td>
+                  <td style="color: #1A1A1A; padding: 8px 0; font-weight: 600;">${clubName}</td>
+                </tr>
+                <tr>
+                  <td style="color: #9CA3AF; padding: 8px 0;">Location:</td>
+                  <td style="color: #1A1A1A; padding: 8px 0;">${clubLocation || 'Not specified'}</td>
+                </tr>
+                <tr>
+                  <td style="color: #9CA3AF; padding: 8px 0;">Created by:</td>
+                  <td style="color: #1A1A1A; padding: 8px 0;">${creatorName}</td>
+                </tr>
+                <tr>
+                  <td style="color: #9CA3AF; padding: 8px 0;">Creator email:</td>
+                  <td style="color: #1A1A1A; padding: 8px 0;">${creatorEmail || 'Not provided'}</td>
+                </tr>
+              </table>
+              <p style="color: #6B7280; font-size: 14px; line-height: 20px; margin: 0;">
+                Use the admin API to verify or reject this club.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 12px; margin: 0;">UTx - Every ERG Counts</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail(ADMIN_EMAIL, `New Club Pending: ${clubName}`, html);
+}
+
+/**
+ * Send email to club creator when their club is verified
+ */
+export async function sendClubVerifiedEmail(
+  email: string,
+  name: string,
+  clubName: string,
+  inviteCode: string
+): Promise<EmailResult> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Club is Live!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="background-color: #0D4F4F; padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">UTx</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="color: #1A1A1A; margin: 0 0 20px 0; font-size: 24px;">Your Club is Live!</h2>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Hi ${name},
+              </p>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Great news! <strong>${clubName}</strong> has been verified and is now live on UTx.
+              </p>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Share this invite code with your club members so they can join:
+              </p>
+              <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0D4F4F;">${inviteCode}</span>
+              </div>
+              <p style="color: #9CA3AF; font-size: 14px; line-height: 20px; margin: 0;">
+                Members can enter this code in the app to instantly join your club.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 12px; margin: 0;">UTx - Every ERG Counts</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail(email, `${clubName} is now live on UTx!`, html);
+}
+
+/**
+ * Send email to club creator when their club is rejected
+ */
+export async function sendClubRejectedEmail(
+  email: string,
+  name: string,
+  clubName: string,
+  reason?: string
+): Promise<EmailResult> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Club Not Approved</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="background-color: #0D4F4F; padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">UTx</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="color: #1A1A1A; margin: 0 0 20px 0; font-size: 24px;">Club Not Approved</h2>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Hi ${name},
+              </p>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Unfortunately, your club <strong>${clubName}</strong> was not approved for UTx.
+              </p>
+              ${reason ? `
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                <strong>Reason:</strong> ${reason}
+              </p>
+              ` : ''}
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0;">
+                If you believe this was a mistake or have questions, please contact us at support@utx.app.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 12px; margin: 0;">UTx - Every ERG Counts</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail(email, `Update on your club: ${clubName}`, html);
+}
+
+/**
+ * Send email to user when their join request is approved
+ */
+export async function sendJoinApprovedEmail(
+  email: string,
+  name: string,
+  clubName: string
+): Promise<EmailResult> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to ${clubName}!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="background-color: #0D4F4F; padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">UTx</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="color: #1A1A1A; margin: 0 0 20px 0; font-size: 24px;">Welcome to ${clubName}!</h2>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Hi ${name},
+              </p>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Your request to join <strong>${clubName}</strong> has been approved. You're now a member!
+              </p>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0;">
+                Open the UTx app to see your club, join squads, and start logging workouts with your teammates.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 12px; margin: 0;">UTx - Every ERG Counts</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail(email, `You're now a member of ${clubName}!`, html);
+}
+
+/**
+ * Send email to user when their join request is rejected
+ */
+export async function sendJoinRejectedEmail(
+  email: string,
+  name: string,
+  clubName: string,
+  reason?: string
+): Promise<EmailResult> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Request Update</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="background-color: #0D4F4F; padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">UTx</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="color: #1A1A1A; margin: 0 0 20px 0; font-size: 24px;">Join Request Not Approved</h2>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Hi ${name},
+              </p>
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                Your request to join <strong>${clubName}</strong> was not approved.
+              </p>
+              ${reason ? `
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                <strong>Reason:</strong> ${reason}
+              </p>
+              ` : ''}
+              <p style="color: #6B7280; font-size: 16px; line-height: 24px; margin: 0;">
+                You can search for other clubs in the UTx app or contact the club directly if you think this was a mistake.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 12px; margin: 0;">UTx - Every ERG Counts</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail(email, `Update on your request to join ${clubName}`, html);
+}

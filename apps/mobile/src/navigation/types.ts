@@ -85,6 +85,7 @@ export type RootStackParamList = {
   PBHistory: { category: string };
   ClubSearch: undefined;
   AthleteSearch: undefined;
+  CreateClub: undefined;
 };
 
 // Screen prop types

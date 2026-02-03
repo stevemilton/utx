@@ -9,6 +9,9 @@ import {
   RefreshControl,
   FlatList,
   Alert,
+  Modal,
+  TextInput,
+  Clipboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight } from '../constants/theme';
 import { api } from '../services/api';
 import type { RootStackScreenProps } from '../navigation/types';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
 
 interface Squad {
   id: string;
@@ -28,6 +33,8 @@ interface ClubMember {
   name: string;
   avatarUrl?: string;
   totalMeters: number;
+  role?: 'admin' | 'member';
+  joinedAt?: string;
 }
 
 interface JoinRequest {
@@ -63,6 +70,16 @@ export const ClubDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Admin features state
+  const [members, setMembers] = useState<ClubMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<ClubMember | null>(null);
+  const [showMemberActions, setShowMemberActions] = useState(false);
 
   const fetchClub = useCallback(async () => {
     try {
@@ -194,6 +211,201 @@ export const ClubDetailScreen: React.FC = () => {
 
   const navigateToProfile = (userId: string) => {
     navigation.navigate('UserProfile', { userId });
+  };
+
+  // Admin functions
+  const fetchMembers = useCallback(async () => {
+    if (!club?.userRole || club.userRole !== 'admin') return;
+
+    setLoadingMembers(true);
+    try {
+      const response = await api.getClubMembers(clubId);
+      if (response.success && response.data) {
+        setMembers(response.data as ClubMember[]);
+      }
+    } catch (error) {
+      console.error('Error fetching members:', error);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, [clubId, club?.userRole]);
+
+  useEffect(() => {
+    if (club?.userRole === 'admin') {
+      fetchMembers();
+    }
+  }, [club?.userRole, fetchMembers]);
+
+  const handleEditClub = () => {
+    if (!club) return;
+    setEditName(club.name);
+    setEditLocation(club.location || '');
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim()) {
+      Alert.alert('Error', 'Club name is required');
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const response = await api.updateClub(clubId, {
+        name: editName.trim(),
+        location: editLocation.trim() || undefined,
+      });
+
+      if (response.success) {
+        setClub((prev) => prev ? { ...prev, name: editName.trim(), location: editLocation.trim() || undefined } : null);
+        setShowEditModal(false);
+        Alert.alert('Success', 'Club updated successfully');
+      } else {
+        Alert.alert('Error', response.error || 'Failed to update club');
+      }
+    } catch (error) {
+      console.error('Error updating club:', error);
+      Alert.alert('Error', 'Failed to update club');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleRegenerateCode = () => {
+    Alert.alert(
+      'Regenerate Invite Code?',
+      'This will invalidate the current code. Members using the old code won\'t be able to join.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              const response = await api.regenerateInviteCode(clubId);
+              if (response.success && response.data) {
+                const newCode = (response.data as { inviteCode: string }).inviteCode;
+                setClub((prev) => prev ? { ...prev, inviteCode: newCode } : null);
+                Alert.alert('Success', `New invite code: ${newCode}`);
+              } else {
+                Alert.alert('Error', response.error || 'Failed to regenerate code');
+              }
+            } catch (error) {
+              console.error('Error regenerating code:', error);
+              Alert.alert('Error', 'Failed to regenerate code');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteClub = () => {
+    Alert.alert(
+      'Delete Club?',
+      `This will permanently delete "${club?.name}" and remove all members. This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              const response = await api.deleteClub(clubId);
+              if (response.success) {
+                navigation.goBack();
+              } else {
+                Alert.alert('Error', response.error || 'Failed to delete club');
+              }
+            } catch (error) {
+              console.error('Error deleting club:', error);
+              Alert.alert('Error', 'Failed to delete club');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCopyCode = () => {
+    if (club?.inviteCode) {
+      Clipboard.setString(club.inviteCode);
+      Alert.alert('Copied!', 'Invite code copied to clipboard');
+    }
+  };
+
+  const handleMemberPress = (member: ClubMember) => {
+    if (club?.userRole !== 'admin') {
+      navigateToProfile(member.id);
+      return;
+    }
+    setSelectedMember(member);
+    setShowMemberActions(true);
+  };
+
+  const handleChangeRole = async (newRole: 'admin' | 'member') => {
+    if (!selectedMember) return;
+
+    setShowMemberActions(false);
+    setActionLoading(true);
+    try {
+      const response = await api.changeMemberRole(clubId, selectedMember.id, newRole);
+      if (response.success) {
+        setMembers((prev) =>
+          prev.map((m) => (m.id === selectedMember.id ? { ...m, role: newRole } : m))
+        );
+        Alert.alert('Success', `${selectedMember.name} is now ${newRole === 'admin' ? 'an admin' : 'a member'}`);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to change role');
+      }
+    } catch (error) {
+      console.error('Error changing role:', error);
+      Alert.alert('Error', 'Failed to change role');
+    } finally {
+      setActionLoading(false);
+      setSelectedMember(null);
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!selectedMember) return;
+
+    Alert.alert(
+      'Remove Member?',
+      `Are you sure you want to remove ${selectedMember.name} from the club?`,
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => setShowMemberActions(false) },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setShowMemberActions(false);
+            setActionLoading(true);
+            try {
+              const response = await api.removeMember(clubId, selectedMember.id);
+              if (response.success) {
+                setMembers((prev) => prev.filter((m) => m.id !== selectedMember.id));
+                setClub((prev) => prev ? { ...prev, memberCount: prev.memberCount - 1 } : null);
+                Alert.alert('Success', `${selectedMember.name} has been removed`);
+              } else {
+                Alert.alert('Error', response.error || 'Failed to remove member');
+              }
+            } catch (error) {
+              console.error('Error removing member:', error);
+              Alert.alert('Error', 'Failed to remove member');
+            } finally {
+              setActionLoading(false);
+              setSelectedMember(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -371,7 +583,7 @@ export const ClubDetailScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>Invite Code</Text>
             <View style={styles.inviteCodeContainer}>
               <Text style={styles.inviteCode}>{club.inviteCode}</Text>
-              <TouchableOpacity style={styles.copyButton}>
+              <TouchableOpacity style={styles.copyButton} onPress={handleCopyCode}>
                 <Text style={styles.copyButtonText}>Copy</Text>
               </TouchableOpacity>
             </View>
@@ -395,6 +607,82 @@ export const ClubDetailScreen: React.FC = () => {
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </TouchableOpacity>
             )}
+
+            {/* Admin: Regenerate Code */}
+            {club.userRole === 'admin' && (
+              <TouchableOpacity
+                style={styles.regenerateCodeButton}
+                onPress={handleRegenerateCode}
+                disabled={actionLoading}
+              >
+                <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
+                <Text style={styles.regenerateCodeText}>Regenerate Invite Code</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Admin: Members List */}
+        {club.userRole === 'admin' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>All Members ({members.length})</Text>
+            </View>
+            {loadingMembers ? (
+              <View style={styles.memberLoadingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : (
+              members.map((member) => (
+                <TouchableOpacity
+                  key={member.id}
+                  style={styles.adminMemberItem}
+                  onPress={() => handleMemberPress(member)}
+                >
+                  <View style={styles.memberAvatar}>
+                    <Text style={styles.memberAvatarText}>
+                      {member.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>{member.name}</Text>
+                    <View style={styles.memberMeta}>
+                      {member.role === 'admin' && (
+                        <View style={styles.adminBadge}>
+                          <Text style={styles.adminBadgeText}>Admin</Text>
+                        </View>
+                      )}
+                      {member.totalMeters > 0 && (
+                        <Text style={styles.memberDistance}>
+                          {formatDistance(member.totalMeters)}m
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  <Ionicons name="ellipsis-vertical" size={18} color={colors.textTertiary} />
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* Admin: Club Settings */}
+        {club.userRole === 'admin' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Club Settings</Text>
+            <TouchableOpacity style={styles.settingItem} onPress={handleEditClub}>
+              <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
+              <Text style={styles.settingText}>Edit Club Details</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.settingItem, styles.dangerSettingItem]}
+              onPress={handleDeleteClub}
+            >
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
+              <Text style={[styles.settingText, styles.dangerText]}>Delete Club</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -449,6 +737,111 @@ export const ClubDetailScreen: React.FC = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Edit Club Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowEditModal(false)}>
+              <Text style={styles.modalCancel}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Edit Club</Text>
+            <TouchableOpacity onPress={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Text style={styles.modalSave}>Save</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          <View style={styles.modalContent}>
+            <Input
+              label="Club Name"
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Enter club name"
+            />
+            <View style={styles.inputSpacer} />
+            <Input
+              label="Location (optional)"
+              value={editLocation}
+              onChangeText={setEditLocation}
+              placeholder="e.g., Sydney, Australia"
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Member Actions Modal */}
+      <Modal
+        visible={showMemberActions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMemberActions(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMemberActions(false)}
+        >
+          <View style={styles.actionSheet}>
+            <Text style={styles.actionSheetTitle}>{selectedMember?.name}</Text>
+
+            <TouchableOpacity
+              style={styles.actionSheetItem}
+              onPress={() => {
+                setShowMemberActions(false);
+                if (selectedMember) navigateToProfile(selectedMember.id);
+              }}
+            >
+              <Ionicons name="person-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.actionSheetText}>View Profile</Text>
+            </TouchableOpacity>
+
+            {selectedMember?.role === 'member' && (
+              <TouchableOpacity
+                style={styles.actionSheetItem}
+                onPress={() => handleChangeRole('admin')}
+              >
+                <Ionicons name="shield-outline" size={20} color={colors.primary} />
+                <Text style={[styles.actionSheetText, { color: colors.primary }]}>
+                  Make Admin
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {selectedMember?.role === 'admin' && (
+              <TouchableOpacity
+                style={styles.actionSheetItem}
+                onPress={() => handleChangeRole('member')}
+              >
+                <Ionicons name="shield-outline" size={20} color={colors.textSecondary} />
+                <Text style={styles.actionSheetText}>Remove Admin Role</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[styles.actionSheetItem, styles.actionSheetDanger]}
+              onPress={handleRemoveMember}
+            >
+              <Ionicons name="remove-circle-outline" size={20} color={colors.error} />
+              <Text style={[styles.actionSheetText, styles.dangerText]}>Remove from Club</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionSheetItem, styles.actionSheetCancel]}
+              onPress={() => setShowMemberActions(false)}
+            >
+              <Text style={styles.actionSheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -789,5 +1182,155 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  // Admin styles
+  regenerateCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  regenerateCodeText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  memberLoadingContainer: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  adminMemberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  memberMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  adminBadge: {
+    backgroundColor: colors.primarySubtle,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  adminBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  settingText: {
+    flex: 1,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
+  dangerSettingItem: {
+    backgroundColor: colors.error + '10',
+  },
+  dangerText: {
+    color: colors.error,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalCancel: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  modalSave: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  modalContent: {
+    padding: spacing.lg,
+  },
+  inputSpacer: {
+    height: spacing.md,
+  },
+  // Action sheet styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  actionSheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  actionSheetTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  actionSheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  actionSheetText: {
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
+  actionSheetDanger: {
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.lg,
+  },
+  actionSheetCancel: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    justifyContent: 'center',
+  },
+  actionSheetCancelText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
 });

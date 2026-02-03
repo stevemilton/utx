@@ -326,7 +326,7 @@ class ApiService {
   }
 
   async joinClubByCode(inviteCode: string) {
-    return this.request('/clubs/join-by-code', {
+    return this.request<{ clubId: string; clubName: string }>('/clubs/join', {
       method: 'POST',
       body: { inviteCode },
     });
@@ -413,6 +413,43 @@ class ApiService {
   async cancelJoinRequest(clubId: string, requestId: string) {
     return this.request(`/clubs/${clubId}/requests/${requestId}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Club management (admin only)
+  async updateClub(clubId: string, data: { name?: string; location?: string }) {
+    return this.request(`/clubs/${clubId}`, {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+
+  async deleteClub(clubId: string) {
+    return this.request(`/clubs/${clubId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getClubMembers(clubId: string) {
+    return this.request(`/clubs/${clubId}/members`);
+  }
+
+  async removeMember(clubId: string, userId: string) {
+    return this.request(`/clubs/${clubId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async changeMemberRole(clubId: string, userId: string, role: 'admin' | 'member') {
+    return this.request(`/clubs/${clubId}/members/${userId}`, {
+      method: 'PATCH',
+      body: { role },
+    });
+  }
+
+  async regenerateInviteCode(clubId: string) {
+    return this.request(`/clubs/${clubId}/regenerate-code`, {
+      method: 'POST',
     });
   }
 

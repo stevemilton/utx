@@ -17,6 +17,7 @@ import { pbsRoutes } from './routes/pbs.js';
 import { clubsRoutes } from './routes/clubs.js';
 import { leaderboardsRoutes } from './routes/leaderboards.js';
 import { stravaRoutes } from './routes/strava.js';
+import { adminRoutes } from './routes/admin.js';
 
 dotenv.config();
 
@@ -82,6 +83,7 @@ server.register(pbsRoutes, { prefix: '/pbs' });
 server.register(clubsRoutes, { prefix: '/clubs' });
 server.register(leaderboardsRoutes, { prefix: '/leaderboards' });
 server.register(stravaRoutes, { prefix: '/strava' });
+server.register(adminRoutes, { prefix: '/admin' });
 
 // Error handler
 server.setErrorHandler((error: Error & { statusCode?: number }, request, reply) => {

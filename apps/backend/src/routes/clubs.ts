@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { sendClubCreatedNotification, sendJoinApprovedEmail, sendJoinRejectedEmail } from '../services/email';
 
 // Generate a random invite code
 function generateInviteCode(): string {
@@ -174,6 +175,12 @@ export async function clubsRoutes(fastify: FastifyInstance) {
       });
     }
 
+    // Get creator info for notification
+    const creator = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
     // Create club with creator as admin
     const club = await prisma.club.create({
       data: {
@@ -189,6 +196,18 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         },
       },
     });
+
+    // Send notification to admin for verification
+    try {
+      await sendClubCreatedNotification(
+        club.name,
+        club.location,
+        creator?.name || 'Unknown',
+        creator?.email || null
+      );
+    } catch (err) {
+      fastify.log.error(err, 'Failed to send club created notification');
+    }
 
     return {
       success: true,
@@ -721,11 +740,11 @@ export async function clubsRoutes(fastify: FastifyInstance) {
       });
     }
 
-    // Get the request
+    // Get the request with user email for notification
     const joinRequest = await prisma.clubJoinRequest.findUnique({
       where: { id: requestId },
       include: {
-        user: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, email: true } },
         club: { select: { name: true } },
       },
     });
@@ -763,6 +782,19 @@ export async function clubsRoutes(fastify: FastifyInstance) {
       }),
     ]);
 
+    // Send approval email to user
+    if (joinRequest.user.email) {
+      try {
+        await sendJoinApprovedEmail(
+          joinRequest.user.email,
+          joinRequest.user.name,
+          joinRequest.club.name
+        );
+      } catch (err) {
+        fastify.log.error(err, 'Failed to send join approved email');
+      }
+    }
+
     return {
       success: true,
       message: `${joinRequest.user.name} has been added to ${joinRequest.club.name}`,
@@ -798,11 +830,12 @@ export async function clubsRoutes(fastify: FastifyInstance) {
       });
     }
 
-    // Get the request
+    // Get the request with user email for notification
     const joinRequest = await prisma.clubJoinRequest.findUnique({
       where: { id: requestId },
       include: {
-        user: { select: { name: true } },
+        user: { select: { name: true, email: true } },
+        club: { select: { name: true } },
       },
     });
 
@@ -829,6 +862,20 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         rejectionReason: reason?.trim() || null,
       },
     });
+
+    // Send rejection email to user
+    if (joinRequest.user.email) {
+      try {
+        await sendJoinRejectedEmail(
+          joinRequest.user.email,
+          joinRequest.user.name,
+          joinRequest.club.name,
+          reason?.trim()
+        );
+      } catch (err) {
+        fastify.log.error(err, 'Failed to send join rejected email');
+      }
+    }
 
     return {
       success: true,
@@ -880,6 +927,332 @@ export async function clubsRoutes(fastify: FastifyInstance) {
     return {
       success: true,
       message: 'Join request cancelled',
+    };
+  });
+
+  // ============================================
+  // CLUB MANAGEMENT ENDPOINTS (Admin only)
+  // ============================================
+
+  // Update club (admin only)
+  fastify.patch<{
+    Params: { id: string };
+    Body: { name?: string; location?: string };
+  }>('/:id', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = request.authUser!.id;
+    const { id: clubId } = request.params;
+    const { name, location } = request.body;
+
+    // Check if user is admin
+    const membership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId } },
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can update the club',
+      });
+    }
+
+    // Validate name if provided
+    if (name !== undefined) {
+      if (!name || name.trim().length < 2) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Club name must be at least 2 characters',
+        });
+      }
+    }
+
+    const updatedClub = await prisma.club.update({
+      where: { id: clubId },
+      data: {
+        ...(name !== undefined && { name: name.trim() }),
+        ...(location !== undefined && { location: location?.trim() || null }),
+      },
+    });
+
+    return {
+      success: true,
+      data: updatedClub,
+      message: 'Club updated successfully',
+    };
+  });
+
+  // Delete club (admin only)
+  fastify.delete<{ Params: { id: string } }>('/:id', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = request.authUser!.id;
+    const { id: clubId } = request.params;
+
+    // Check if user is admin
+    const membership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId } },
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can delete the club',
+      });
+    }
+
+    // Delete in order: squad memberships, squads, club memberships, join requests, club
+    await prisma.$transaction(async (tx) => {
+      // Get all squad IDs for this club
+      const squads = await tx.squad.findMany({
+        where: { clubId },
+        select: { id: true },
+      });
+      const squadIds = squads.map(s => s.id);
+
+      // Delete squad memberships
+      if (squadIds.length > 0) {
+        await tx.squadMembership.deleteMany({
+          where: { squadId: { in: squadIds } },
+        });
+      }
+
+      // Delete squads
+      await tx.squad.deleteMany({ where: { clubId } });
+
+      // Delete club memberships
+      await tx.clubMembership.deleteMany({ where: { clubId } });
+
+      // Delete join requests
+      await tx.clubJoinRequest.deleteMany({ where: { clubId } });
+
+      // Delete club
+      await tx.club.delete({ where: { id: clubId } });
+    });
+
+    return {
+      success: true,
+      message: 'Club deleted successfully',
+    };
+  });
+
+  // Get club members (members only)
+  fastify.get<{ Params: { id: string } }>('/:id/members', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = request.authUser!.id;
+    const { id: clubId } = request.params;
+
+    // Check if user is a member
+    const membership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId } },
+    });
+
+    if (!membership) {
+      return reply.status(403).send({
+        success: false,
+        error: 'You must be a member to view the member list',
+      });
+    }
+
+    const members = await prisma.clubMembership.findMany({
+      where: { clubId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: [
+        { role: 'asc' }, // admins first
+        { joinedAt: 'asc' },
+      ],
+    });
+
+    return {
+      success: true,
+      data: members.map(m => ({
+        id: m.user.id,
+        name: m.user.name,
+        avatarUrl: m.user.avatarUrl,
+        role: m.role,
+        joinedAt: m.joinedAt,
+      })),
+    };
+  });
+
+  // Remove member (admin only)
+  fastify.delete<{
+    Params: { id: string; userId: string };
+  }>('/:id/members/:userId', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const adminId = request.authUser!.id;
+    const { id: clubId, userId: targetUserId } = request.params;
+
+    // Check if requester is admin
+    const adminMembership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId: adminId } },
+    });
+
+    if (!adminMembership || adminMembership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can remove members',
+      });
+    }
+
+    // Cannot remove yourself (use leave instead)
+    if (targetUserId === adminId) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Cannot remove yourself. Use the leave endpoint instead.',
+      });
+    }
+
+    // Check if target is a member
+    const targetMembership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId: targetUserId } },
+    });
+
+    if (!targetMembership) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Member not found',
+      });
+    }
+
+    // Remove from club and all squads in that club
+    await prisma.$transaction(async (tx) => {
+      // Get all squad IDs for this club
+      const squads = await tx.squad.findMany({
+        where: { clubId },
+        select: { id: true },
+      });
+      const squadIds = squads.map(s => s.id);
+
+      // Remove from all squads in this club
+      if (squadIds.length > 0) {
+        await tx.squadMembership.deleteMany({
+          where: {
+            squadId: { in: squadIds },
+            userId: targetUserId,
+          },
+        });
+      }
+
+      // Remove from club
+      await tx.clubMembership.delete({
+        where: { clubId_userId: { clubId, userId: targetUserId } },
+      });
+    });
+
+    return {
+      success: true,
+      message: 'Member removed successfully',
+    };
+  });
+
+  // Change member role (admin only)
+  fastify.patch<{
+    Params: { id: string; userId: string };
+    Body: { role: 'admin' | 'member' };
+  }>('/:id/members/:userId', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const adminId = request.authUser!.id;
+    const { id: clubId, userId: targetUserId } = request.params;
+    const { role } = request.body;
+
+    if (!role || !['admin', 'member'].includes(role)) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Invalid role. Must be "admin" or "member"',
+      });
+    }
+
+    // Check if requester is admin
+    const adminMembership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId: adminId } },
+    });
+
+    if (!adminMembership || adminMembership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can change member roles',
+      });
+    }
+
+    // Check if target is a member
+    const targetMembership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId: targetUserId } },
+    });
+
+    if (!targetMembership) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Member not found',
+      });
+    }
+
+    // If demoting from admin, check there's at least one other admin
+    if (targetMembership.role === 'admin' && role === 'member') {
+      const adminCount = await prisma.clubMembership.count({
+        where: { clubId, role: 'admin' },
+      });
+
+      if (adminCount <= 1) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Cannot demote the last admin. Promote another member first or delete the club.',
+        });
+      }
+    }
+
+    await prisma.clubMembership.update({
+      where: { clubId_userId: { clubId, userId: targetUserId } },
+      data: { role },
+    });
+
+    return {
+      success: true,
+      message: `Member role changed to ${role}`,
+    };
+  });
+
+  // Regenerate invite code (admin only)
+  fastify.post<{ Params: { id: string } }>('/:id/regenerate-code', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = request.authUser!.id;
+    const { id: clubId } = request.params;
+
+    // Check if user is admin
+    const membership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId } },
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can regenerate the invite code',
+      });
+    }
+
+    const newCode = generateInviteCode();
+
+    const updatedClub = await prisma.club.update({
+      where: { id: clubId },
+      data: { inviteCode: newCode },
+    });
+
+    return {
+      success: true,
+      data: { inviteCode: updatedClub.inviteCode },
+      message: 'Invite code regenerated successfully',
     };
   });
 }

@@ -18,6 +18,7 @@ import { ClubDetailScreen } from '../screens/ClubDetailScreen';
 import { ClubJoinRequestsScreen } from '../screens/ClubJoinRequestsScreen';
 import { SquadDetailScreen } from '../screens/SquadDetailScreen';
 import { ClubSearchScreen } from '../screens/ClubSearchScreen';
+import { CreateClubScreen } from '../screens/CreateClubScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { AthleteSearchScreen } from '../screens/AthleteSearchScreen';
 
@@ -65,6 +66,7 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen name="ClubJoinRequests" component={ClubJoinRequestsScreen} />
             <Stack.Screen name="SquadDetail" component={SquadDetailScreen} />
             <Stack.Screen name="ClubSearch" component={ClubSearchScreen} />
+            <Stack.Screen name="CreateClub" component={CreateClubScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
           </Stack.Group>
