@@ -1,129 +1,140 @@
-# UTx Handoff - 3 February 2026
+# UTx Handoff - 3 February 2026 (Build 33)
 
 ## COMPLETED THIS SESSION
 
-### 1. Profile Support Section + Reset Password Modal ✅
-**All code committed and pushed**
+### Build 33 Changes
+**All code committed (`7b949a9`) and pushed to `main`**
 
-- **Commit:** `7dc50bc` - "Add Profile Support section with Reset Password modal"
-- **Branch:** `affectionate-williams`
-- **Pushed to GitHub:** Yes
+#### 1. Machine Type Selector (Row/Bike/Ski)
 
-**Files modified:**
-| File | Changes |
-|------|---------|
-| `apps/mobile/src/screens/main/ProfileScreen.tsx` | Added maskEmail helper (L46-53), reset password state (L65-68), handlers (L228-252), Support section URLs (L474-506), Reset Password Modal (L597-662), modal styles (L1009-1069) |
-| `apps/mobile/src/stores/authStore.ts` | Added `email?: string` to UserProfile interface (L10) |
-| `CLAUDE.md` | Updated with Railway deployment info |
+**Database** (`apps/backend/prisma/schema.prisma`)
+- Added `MachineType` enum: `row`, `bike`, `ski`
+- Added `machineType` field to Workout model with default `row`
+- Migration: `apps/backend/prisma/migrations/20260203_add_machine_type/migration.sql`
 
-### 2. iOS Build 31 ✅
-**Successfully submitted to TestFlight**
+**Backend** (`apps/backend/src/routes/workouts.ts`)
+- Import `MachineType` from Prisma client
+- Added `machineType?: 'row' | 'bike' | 'ski'` to `CreateWorkoutBody` and `UpdateWorkoutBody`
+- Added `mapMachineType()` helper function
+- machineType saved on workout creation (line ~267)
+- machineType handled in PATCH update (line ~571)
 
-- **Build ID:** `217537fb-0d37-455e-9d58-c3fa3f7ba76d`
-- **Build Logs:** https://expo.dev/accounts/stevemilton/projects/utx/builds/217537fb-0d37-455e-9d58-c3fa3f7ba76d
-- **IPA:** https://expo.dev/artifacts/eas/58CrzXQitxkngiRreGTMYi.ipa
+**Mobile - AddWorkoutScreen** (`apps/mobile/src/screens/main/AddWorkoutScreen.tsx`)
+- Added `machineType` state (line 214)
+- Added Machine Type Selector UI between Privacy toggle and Save button (lines 696-723)
+- Selector uses green accent for selected state, icons: boat/bicycle/snow
+- machineType included in workoutData when saving (line 374)
+- Added styles: `machineTypeSection`, `machineTypeButtons`, `machineTypeButton`, `machineTypeButtonActive`, `machineTypeText`, `machineTypeTextActive` (lines 1159-1191)
 
-### 3. Railway Investigation ✅
-**Root cause identified - deployment method was wrong**
+**Mobile - WorkoutDetailScreen** (`apps/mobile/src/screens/WorkoutDetailScreen.tsx`)
+- Added subtle machine type indicator below workout type badge (lines 1375-1389)
+- Shows icon + label (Row/Bike/Ski) in tertiary color
+- Added styles: `machineTypeIndicator`, `machineTypeIndicatorText` (lines 1676-1685)
 
-Discovered that Railway is configured for **GitHub auto-deploy**, NOT CLI:
-- Service name: `utx` (not "api" as previously documented)
-- Root directory: `apps/backend` (configured in Railway dashboard)
-- Branch: `main` (auto-deploys on push)
-- CLI `railway up` fails with: `Could not find root directory: apps/backend`
+**Mobile - Store** (`apps/mobile/src/stores/workoutStore.ts`)
+- Added `machineType?: 'row' | 'bike' | 'ski'` to `Workout` interface (line 42)
+
+**Mobile - API** (`apps/mobile/src/services/api.ts`)
+- `updateWorkout` method already accepts machineType
+
+#### 2. Disabled Take Photo Option
+
+**File**: `apps/mobile/src/screens/main/AddWorkoutScreen.tsx`
+- Moved Take Photo below Manual Entry in options list (lines 818-829)
+- Changed to non-interactive `View` instead of `TouchableOpacity`
+- Applied `optionDisabled` style (opacity: 0.5)
+- Changed description to "Coming soon"
+- Added styles: `optionDisabled`, `optionIconDisabled`, `optionTitleDisabled` (lines 940-948)
+
+#### 3. UI Cleanup
+
+**FeedScreen** (`apps/mobile/src/screens/main/FeedScreen.tsx`)
+- Removed bell icon from header (was non-functional placeholder)
+- Removed `headerButton` style
+
+**ProfileScreen** (`apps/mobile/src/screens/main/ProfileScreen.tsx`)
+- Removed entire Personal Bests section from UI
+- Removed: `PersonalBest` interface, `pbs` state, `loadPbs` function
+- Removed: `pbCategories` array, `getPbValue` helper, `handlePbPress` function
+- Removed: `formatTime` helper (only used for PBs)
+- Removed styles: `pbGrid`, `pbItem`, `pbLabel`, `pbValue`
 
 ---
 
 ## IN PROGRESS
 
-### Backend Deployment
-**Status:** NOT deployed (but not needed for Build 31)
-
-The Profile Support changes are **frontend-only**. The backend `/auth/request-reset` endpoint already exists and is working on the current production deployment.
-
-If backend changes are needed in the future:
-```bash
-git checkout main
-git merge affectionate-williams
-git push origin main
-# Railway auto-deploys within ~2 minutes
-```
+### EAS Build 33
+- **Status**: Building
+- **Build ID**: `4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a`
+- **URL**: https://expo.dev/accounts/stevemilton/projects/utx/builds/4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a
+- **Next Step**: Submit to Apple TestFlight when build completes
 
 ---
 
 ## BROKEN/BLOCKED
 
-### Railway CLI Deployment ❌
-**DO NOT USE `railway up`** - it doesn't work for this project.
+None known. All TypeScript checks pass.
 
-The documented command in STATUS.md is wrong:
+**Note**: Database migration needs to be run on production:
 ```bash
-# WRONG - This fails:
-railway up --service api --detach
-# Error: Could not find root directory: apps/backend
+# The migration file exists but may need to be applied to Railway DB
+# Check if Railway auto-runs migrations or if manual execution needed
 ```
 
-Railway is set up for GitHub auto-deploy only. The service watches the `main` branch.
+---
 
-### iOS Simulator
-**Not tested this session** - was instructed to focus on Railway investigation first.
+## DEPLOYMENT STATUS
 
-There was a conflict with another Expo server running on port 8081 from a different worktree.
+| Target | Status | Details |
+|--------|--------|---------|
+| GitHub | ✅ Pushed | Commit `7b949a9` on `main` |
+| Railway | ✅ Auto-deploying | Triggered by push to `main` |
+| EAS Build 33 | 🔄 Building | Build ID: `4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a` |
 
 ---
 
 ## RESUME
 
-### To Test Build 31 in Simulator
 ```bash
-cd /Users/stevemilton/.claude-worktrees/utx/affectionate-williams
+cd /Users/stevemilton/utx
 
-# Kill any existing Expo processes
-pkill -f "expo" || true
-lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+# Check EAS build 33 status
+eas build:list --platform ios --limit 1
 
-# Start fresh
-cd apps/mobile
-npx expo start --ios
-```
+# If build complete, submit to Apple:
+eas submit --platform ios --id 4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a
 
-### To Verify Backend Health
-```bash
+# Check Railway deployment health
 curl https://utx-production.up.railway.app/health
-```
 
-### To Check Build 31 Status
-```bash
-cd /Users/stevemilton/.claude-worktrees/utx/affectionate-williams/apps/mobile
-eas build:list --limit 3
-```
+# Run mobile locally
+cd apps/mobile && npx expo start
 
-### To Deploy Backend (when needed)
-```bash
-cd /Users/stevemilton/.claude-worktrees/utx/affectionate-williams
-git checkout main
-git merge affectionate-williams
-git push origin main
-# Railway auto-deploys from main branch
+# Run backend locally
+cd apps/backend && npm run dev
 ```
 
 ---
 
 ## NEXT TASKS
 
-1. **Wait for TestFlight** - Build 31 should appear within 30-60 minutes
-2. **Test on device** - Verify Profile Support section:
-   - Help & FAQ → Opens Notion page
-   - Contact Support → Opens mailto:support@polarindustries.co
-   - Reset Password → Modal (only for email/password users)
-   - Privacy Policy → Opens Notion page
-   - Terms of Service → Opens Notion page
-3. **Test Reset Password flow** - For email auth users:
-   - Tap Reset Password
-   - See masked email
-   - Tap Send Reset Link
-   - See loading → success state
-   - Tap Done
+1. **Submit Build 33 to TestFlight** - once EAS build completes
+2. **Test machine type selector** - verify Row/Bike/Ski persists correctly
+3. **Verify database migration** - ensure MachineType enum is applied to Railway DB
+
+---
+
+## KEY FILES MODIFIED
+
+| File | Changes |
+|------|---------|
+| `apps/backend/prisma/schema.prisma` | Added MachineType enum (lines 128-132) |
+| `apps/backend/src/routes/workouts.ts` | machineType handling (lines 14, 34, 69-73, 267, 571) |
+| `apps/mobile/src/screens/main/AddWorkoutScreen.tsx` | Selector UI, disabled Take Photo |
+| `apps/mobile/src/screens/WorkoutDetailScreen.tsx` | Machine type indicator |
+| `apps/mobile/src/screens/main/FeedScreen.tsx` | Removed bell icon |
+| `apps/mobile/src/screens/main/ProfileScreen.tsx` | Removed Personal Bests section |
+| `apps/mobile/src/stores/workoutStore.ts` | Added machineType to interface |
 
 ---
 
@@ -132,19 +143,7 @@ git push origin main
 | Resource | URL |
 |----------|-----|
 | Railway Dashboard | https://railway.com/project/02eb8439-e51a-4d38-8dca-4358a8a67046 |
-| Railway Service Name | `utx` (NOT "api") |
 | Backend Health | https://utx-production.up.railway.app/health |
 | EAS Builds | https://expo.dev/accounts/stevemilton/projects/utx/builds |
-| Build 31 | https://expo.dev/accounts/stevemilton/projects/utx/builds/217537fb-0d37-455e-9d58-c3fa3f7ba76d |
+| Build 33 | https://expo.dev/accounts/stevemilton/projects/utx/builds/4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a |
 | TestFlight | https://appstoreconnect.apple.com/apps/6758580968/testflight/ios |
-
----
-
-## DOCUMENTATION FIXES APPLIED
-
-Updated `CLAUDE.md` with correct Railway deployment info:
-- Railway uses GitHub auto-deploy, not CLI
-- Service name is `utx`, not `api`
-- Must push to `main` branch to trigger deploy
-
-**STATUS.md still has incorrect info** (lines 72-77) - should be updated separately.

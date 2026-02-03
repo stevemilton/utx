@@ -119,13 +119,18 @@ The app supports THREE auth methods:
 ### Key Mobile Files
 - `src/screens/auth/` - Auth screens (EmailLogin, EmailSignup, ForgotPassword, ResetPassword, VerifyEmail)
 - `src/screens/main/ProfileScreen.tsx` - Profile with Reset Password modal
+- `src/screens/ClubDetailScreen.tsx` - Club view with admin features
+- `src/screens/ClubSearchScreen.tsx` - Search clubs, join by invite code
+- `src/screens/CreateClubScreen.tsx` - Create new club flow
 - `src/stores/authStore.ts` - Zustand auth state management
 - `src/services/api.ts` - API service with all endpoints
 - `src/utils/validation.ts` - Email/password validation utilities
 
 ### Key Backend Files
 - `src/routes/auth.ts` - All auth endpoints
-- `src/services/email.ts` - Resend email service
+- `src/routes/clubs.ts` - Club CRUD, membership, join requests
+- `src/routes/admin.ts` - Platform admin routes (club verification)
+- `src/services/email.ts` - Resend email service (auth + club notifications)
 - `prisma/schema.prisma` - Database schema with auth fields
 
 ---
@@ -139,6 +144,8 @@ The app supports THREE auth methods:
 - `FIREBASE_PRIVATE_KEY` - Firebase service account private key
 - `RESEND_API_KEY` - Resend API key for transactional emails
 - `DATABASE_URL` - PostgreSQL connection string (auto-set by Railway)
+- `ADMIN_API_KEY` - Secret key for platform admin endpoints
+- `ADMIN_EMAIL` - Email for club creation notifications (default: clubs@polarindustries.co)
 
 ### Mobile (EAS)
 - Environment variables configured in EAS dashboard for production builds
@@ -150,3 +157,68 @@ The app supports THREE auth methods:
 - **Privacy Policy**: https://kind-lotus-435.notion.site/Privacy-Policy-2fcfeff7be0080718fccc8b94e22580d
 - **Terms of Service**: https://kind-lotus-435.notion.site/Terms-and-Conditions-2fcfeff7be0080a986f2c832b177ddde
 - **Contact Support**: support@polarindustries.co
+
+---
+
+## Club Management System (Build 32)
+
+### Club Lifecycle
+1. User creates club → Status: `unverified`
+2. Email sent to admin (clubs@polarindustries.co)
+3. Admin verifies via `POST /admin/clubs/:id/verify`
+4. Creator receives email with invite code
+5. Members can join via invite code or request to join
+
+### Club Endpoints
+- `POST /clubs` - Create club (starts unverified)
+- `GET /clubs/:id` - Get club details
+- `PATCH /clubs/:id` - Update club (admin only)
+- `DELETE /clubs/:id` - Delete club (admin only)
+- `POST /clubs/join` - Join by invite code
+- `POST /clubs/:id/request` - Request to join
+- `GET /clubs/:id/members` - List members (member only)
+- `DELETE /clubs/:id/members/:userId` - Remove member (admin only)
+- `PATCH /clubs/:id/members/:userId` - Change role (admin only)
+- `POST /clubs/:id/regenerate-code` - New invite code (admin only)
+
+### Platform Admin Endpoints
+Requires `x-admin-key` header matching `ADMIN_API_KEY` env var:
+- `GET /admin/clubs/pending` - List unverified clubs
+- `POST /admin/clubs/:id/verify` - Verify club
+- `POST /admin/clubs/:id/reject` - Reject and delete club
+- `GET /admin/clubs` - List all clubs with filters
+
+### Club Roles
+- `admin` - Can manage members, edit club, regenerate code
+- `member` - Can view club, see invite code, leave
+
+---
+
+## Machine Type Support (Build 33)
+
+### Database
+- `MachineType` enum: `row`, `bike`, `ski`
+- Default value: `row`
+- Field added to Workout model
+
+### Backend
+- `mapMachineType()` helper in `apps/backend/src/routes/workouts.ts`
+- Handled in both create (`POST /workouts`) and update (`PATCH /workouts/:id`)
+
+### Mobile
+- Machine type selector in AddWorkoutScreen (between Privacy toggle and Save button)
+- Machine type indicator on WorkoutDetailScreen (below workout type badge)
+- Icons: boat-outline (row), bicycle-outline (bike), snow-outline (ski)
+
+---
+
+## UI Decisions (Build 33)
+
+### Disabled Features
+- **Take Photo**: Greyed out and disabled on AddWorkoutScreen, shows "Coming soon"
+  - Was too buggy for TestFlight release
+  - Can be re-enabled by changing `View` back to `TouchableOpacity` and removing disabled styles
+
+### Removed Features
+- **Bell Icon**: Removed from FeedScreen header (was non-functional placeholder)
+- **Personal Bests Section**: Removed from ProfileScreen entirely
