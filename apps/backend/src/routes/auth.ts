@@ -96,6 +96,82 @@ function generateSecureToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
+// Generate HTML response for email verification
+function getVerificationHtml(success: boolean, message: string): string {
+  const bgColor = success ? '#10B981' : '#EF4444';
+  const icon = success ? '✓' : '✗';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UTx - Email Verification</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      padding: 20px;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+    }
+    .icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: ${bgColor};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 24px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+    p {
+      color: #a0aec0;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: inline-block;
+      background: #3B82F6;
+      color: white;
+      padding: 12px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 32px;
+      color: #3B82F6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">UTx</div>
+    <div class="icon">${icon}</div>
+    <h1>${success ? 'Email Verified!' : 'Verification Failed'}</h1>
+    <p>${message}</p>
+    ${success ? '<p style="color: #10B981;">You can close this page and return to the app.</p>' : ''}
+  </div>
+</body>
+</html>`;
+}
+
 // Apple JWKS client for verifying Apple identity tokens
 const appleJwksClient = jwksClient({
   jwksUri: 'https://appleid.apple.com/auth/keys',
@@ -483,7 +559,50 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
     }
   );
 
-  // Verify email
+  // Verify email - GET handler for email links (returns HTML page)
+  server.get<{ Querystring: { token: string } }>(
+    '/verify-email',
+    async (request: FastifyRequest<{ Querystring: { token: string } }>, reply: FastifyReply) => {
+      const { token } = request.query;
+
+      try {
+        if (!token) {
+          return reply.type('text/html').send(getVerificationHtml(false, 'No verification token provided'));
+        }
+
+        // Find user by verification token
+        const user = await server.prisma.user.findFirst({
+          where: { emailVerificationToken: token },
+        });
+
+        if (!user) {
+          return reply.type('text/html').send(getVerificationHtml(false, 'Invalid or expired verification link'));
+        }
+
+        // Check if token expired
+        if (user.emailVerificationExpires && new Date() > user.emailVerificationExpires) {
+          return reply.type('text/html').send(getVerificationHtml(false, 'Verification link has expired. Please request a new one in the app.'));
+        }
+
+        // Update user as verified
+        await server.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            emailVerified: true,
+            emailVerificationToken: null,
+            emailVerificationExpires: null,
+          },
+        });
+
+        return reply.type('text/html').send(getVerificationHtml(true, 'Your email has been verified! You can now log in to UTx.'));
+      } catch (error) {
+        request.log.error(error, 'Email verification failed');
+        return reply.type('text/html').send(getVerificationHtml(false, 'Verification failed. Please try again.'));
+      }
+    }
+  );
+
+  // Verify email - POST handler for API calls
   server.post<{ Body: VerifyEmailBody }>(
     '/verify-email',
     async (request: FastifyRequest<{ Body: VerifyEmailBody }>, reply: FastifyReply) => {
