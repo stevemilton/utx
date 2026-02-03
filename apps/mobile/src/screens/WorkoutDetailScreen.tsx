@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
   Share,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -1213,6 +1214,44 @@ export const WorkoutDetailScreen: React.FC = () => {
     }
   };
 
+  // Check if current user owns this workout
+  const isOwner = workout?.user?.id === user?.id;
+
+  const handleEdit = () => {
+    if (!workout) return;
+    navigation.navigate('WorkoutEdit', { workoutId: workout.id });
+  };
+
+  const handleDelete = () => {
+    if (!workout) return;
+    Alert.alert(
+      'Delete Workout',
+      'Are you sure you want to delete this workout? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await api.deleteWorkout(workout.id);
+              if (response.success) {
+                Alert.alert('Deleted', 'Workout deleted successfully.', [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+              } else {
+                Alert.alert('Error', response.error || 'Failed to delete workout');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete workout');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -1292,9 +1331,21 @@ export const WorkoutDetailScreen: React.FC = () => {
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Workout Analysis</Text>
-        <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-          <Ionicons name="share-outline" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {isOwner && (
+            <>
+              <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
+                <Ionicons name="pencil-outline" size={22} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDelete} style={styles.headerButton}>
+                <Ionicons name="trash-outline" size={22} color={colors.error} />
+              </TouchableOpacity>
+            </>
+          )}
+          <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
+            <Ionicons name="share-outline" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -1550,6 +1601,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
