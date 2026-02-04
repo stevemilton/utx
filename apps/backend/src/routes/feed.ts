@@ -22,14 +22,14 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
         case 'all':
         default:
           // Get users the current user follows (for both 'all' and 'following')
-          // Feed should only show workouts from followed users, not all public workouts
+          // Feed should only show workouts from followed users, NOT user's own workouts
+          // User's own workouts appear in "My Workouts" tab instead
           const following = await server.prisma.follow.findMany({
             where: { followerId: userId },
             select: { followingId: true },
           });
           userIds = following.map((f) => f.followingId);
-          // Include own workouts
-          userIds.push(userId);
+          // DO NOT include own workouts - they go in My Workouts tab
           break;
 
         case 'squad':
@@ -40,13 +40,14 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
           });
 
           if (squadMemberships.length > 0) {
-            // Get all members of user's squads
+            // Get all members of user's squads (excluding self)
             const squadIds = squadMemberships.map((m) => m.squadId);
             const squadMembers = await server.prisma.squadMembership.findMany({
               where: { squadId: { in: squadIds } },
               select: { userId: true },
             });
-            userIds = [...new Set(squadMembers.map((m) => m.userId))];
+            // Exclude current user - their workouts are in My Workouts
+            userIds = [...new Set(squadMembers.map((m) => m.userId))].filter(id => id !== userId);
           }
           break;
       }
@@ -54,19 +55,18 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
       const where: any = {};
 
       if (userIds.length > 0) {
-        // Feed: show user's own workouts + followed/squad users' public workouts
+        // Feed: show ONLY followed/squad users' PUBLIC workouts
+        // User's own workouts appear in "My Workouts" tab, not here
         where.AND = [
           { userId: { in: userIds } },
-          {
-            OR: [
-              { userId }, // Always show own workouts
-              { isPublic: true }, // Show others' public workouts only
-            ],
-          },
+          { isPublic: true }, // Only show public workouts from followed users
         ];
       } else {
-        // No follows yet - just show user's own workouts
-        where.userId = userId;
+        // No follows yet - show empty feed (user's workouts are in My Workouts)
+        return reply.send({
+          success: true,
+          data: [],
+        });
       }
 
       if (cursor) {
@@ -155,15 +155,20 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
         where: { squadId: { in: squadIds } },
         select: { userId: true },
       });
-      const userIds = [...new Set(squadMembers.map((m) => m.userId))];
+      // Get squad members excluding current user (their workouts are in My Workouts)
+      const userIds = [...new Set(squadMembers.map((m) => m.userId))].filter(id => id !== userId);
+
+      if (userIds.length === 0) {
+        return reply.send({
+          success: true,
+          data: [],
+        });
+      }
 
       const workouts = await server.prisma.workout.findMany({
         where: {
           userId: { in: userIds },
-          OR: [
-            { userId },
-            { isPublic: true },
-          ],
+          isPublic: true, // Only show public workouts from squad members
         },
         take: 20,
         orderBy: { workoutDate: 'desc' },
@@ -227,15 +232,19 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
         select: { followingId: true },
       });
       const userIds = following.map((f) => f.followingId);
-      userIds.push(userId);
+      // DO NOT include own workouts - they go in My Workouts tab
+
+      if (userIds.length === 0) {
+        return reply.send({
+          success: true,
+          data: [],
+        });
+      }
 
       const workouts = await server.prisma.workout.findMany({
         where: {
           userId: { in: userIds },
-          OR: [
-            { userId },
-            { isPublic: true },
-          ],
+          isPublic: true, // Only show public workouts from followed users
         },
         take: 20,
         orderBy: { workoutDate: 'desc' },

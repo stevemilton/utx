@@ -135,7 +135,7 @@ export const FeedScreen: React.FC = () => {
       <Text style={styles.emptyTitle}>No workouts yet</Text>
       <Text style={styles.emptyText}>
         {activeFilter === 'all'
-          ? 'Add your first workout or follow other rowers to see their sessions'
+          ? 'Follow other rowers to see their workouts here'
           : activeFilter === 'squad'
           ? 'Join a squad to see workouts from your teammates'
           : 'Follow other rowers to see their workouts'}
