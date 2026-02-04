@@ -1,3 +1,6 @@
+// Sentry must be imported first before any other modules
+import { Sentry } from './instrument.js';
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
@@ -88,6 +91,18 @@ server.register(adminRoutes, { prefix: '/admin' });
 // Error handler
 server.setErrorHandler((error: Error & { statusCode?: number }, request, reply) => {
   server.log.error(error);
+
+  // Capture exception in Sentry (skip 4xx client errors)
+  if (!error.statusCode || error.statusCode >= 500) {
+    Sentry.captureException(error, {
+      extra: {
+        url: request.url,
+        method: request.method,
+        params: request.params,
+        query: request.query,
+      },
+    });
+  }
 
   reply.status(error.statusCode || 500).send({
     success: false,
