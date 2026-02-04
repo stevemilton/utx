@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
   },
   followingButtonText: {
-    color: colors.textInverse,
+    color: colors.textSecondary,
   },
   loadingContainer: {
     flex: 1,

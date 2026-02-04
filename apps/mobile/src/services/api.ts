@@ -34,9 +34,13 @@ class ApiService {
     const token = useAuthStore.getState().token;
 
     const requestHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...headers,
     };
+
+    // Only set Content-Type for requests with a body
+    if (body) {
+      requestHeaders['Content-Type'] = 'application/json';
+    }
 
     if (!skipAuth && token) {
       requestHeaders['Authorization'] = `Bearer ${token}`;
