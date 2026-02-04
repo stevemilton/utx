@@ -1,85 +1,76 @@
-# UTx Handoff - 3 February 2026 (Build 33)
+# UTx Handoff - 4 February 2026 (Build 44)
 
 ## COMPLETED THIS SESSION
 
-### Build 33 Changes
-**All code committed (`7b949a9`) and pushed to `main`**
+### Build 44 Changes
+**All code committed (`0f1279a`) and pushed to `main`**
 
-#### 1. Machine Type Selector (Row/Bike/Ski)
+#### 1. Squad Management System
 
-**Database** (`apps/backend/prisma/schema.prisma`)
-- Added `MachineType` enum: `row`, `bike`, `ski`
-- Added `machineType` field to Workout model with default `row`
-- Migration: `apps/backend/prisma/migrations/20260203_add_machine_type/migration.sql`
+**Backend** (`apps/backend/src/routes/clubs.ts`)
+- Added `GET /clubs/squads/:squadId` - Get squad details with members
+- Added `POST /clubs/squads/:squadId/join` - Join squad by ID (for club members)
+- Added `POST /clubs/squads/:squadId/leave` - Leave a squad
+- Updated `GET /clubs/:id` to return `isMember` flag for each squad
 
-**Backend** (`apps/backend/src/routes/workouts.ts`)
-- Import `MachineType` from Prisma client
-- Added `machineType?: 'row' | 'bike' | 'ski'` to `CreateWorkoutBody` and `UpdateWorkoutBody`
-- Added `mapMachineType()` helper function
-- machineType saved on workout creation (line ~267)
-- machineType handled in PATCH update (line ~571)
+**Mobile - ClubDetailScreen** (`apps/mobile/src/screens/ClubDetailScreen.tsx`)
+- Added Squads section visible to all club members
+- Each squad shows member count with Join/Leave buttons
+- Added "Create Squad" button for club admins
+- Added Create Squad modal with name input
+- Empty state when no squads exist
 
-**Mobile - AddWorkoutScreen** (`apps/mobile/src/screens/main/AddWorkoutScreen.tsx`)
-- Added `machineType` state (line 214)
-- Added Machine Type Selector UI between Privacy toggle and Save button (lines 696-723)
-- Selector uses green accent for selected state, icons: boat/bicycle/snow
-- machineType included in workoutData when saving (line 374)
-- Added styles: `machineTypeSection`, `machineTypeButtons`, `machineTypeButton`, `machineTypeButtonActive`, `machineTypeText`, `machineTypeTextActive` (lines 1159-1191)
+**Mobile - SquadDetailScreen** (`apps/mobile/src/screens/SquadDetailScreen.tsx`)
+- Fixed interface to match backend response
+- Shows squad members with captain badges
+- Join/Leave button for club members
+- Notice for non-club members to join club first
+- Removed non-existent fields (weeklyMeters, monthlyMeters)
 
-**Mobile - WorkoutDetailScreen** (`apps/mobile/src/screens/WorkoutDetailScreen.tsx`)
-- Added subtle machine type indicator below workout type badge (lines 1375-1389)
-- Shows icon + label (Row/Bike/Ski) in tertiary color
-- Added styles: `machineTypeIndicator`, `machineTypeIndicatorText` (lines 1676-1685)
+**Mobile - API** (`apps/mobile/src/constants/api.ts`)
+- Updated squad endpoints to use correct paths (`/clubs/squads/:id`)
+- Added `joinByCode` endpoint
 
-**Mobile - Store** (`apps/mobile/src/stores/workoutStore.ts`)
-- Added `machineType?: 'row' | 'bike' | 'ski'` to `Workout` interface (line 42)
+#### 2. Bug Fixes
 
-**Mobile - API** (`apps/mobile/src/services/api.ts`)
-- `updateWorkout` method already accepts machineType
+**Feed showing all workouts** (`apps/backend/src/routes/feed.ts`)
+- Feed now only shows workouts from followed users (not all public workouts)
+- Changed 'all' feed type to behave like 'following'
 
-#### 2. Disabled Take Photo Option
+**Strava "Connected" status** (`apps/mobile/App.tsx`, `apps/mobile/src/screens/main/ProfileScreen.tsx`)
+- Added `updateProfile({ stravaConnected: true })` after successful OAuth callback
+- Button now updates immediately to "Connected"
 
-**File**: `apps/mobile/src/screens/main/AddWorkoutScreen.tsx`
-- Moved Take Photo below Manual Entry in options list (lines 818-829)
-- Changed to non-interactive `View` instead of `TouchableOpacity`
-- Applied `optionDisabled` style (opacity: 0.5)
-- Changed description to "Coming soon"
-- Added styles: `optionDisabled`, `optionIconDisabled`, `optionTitleDisabled` (lines 940-948)
+**User Profile undefined stats** (`apps/backend/src/routes/users.ts`, `apps/mobile/src/screens/UserProfileScreen.tsx`)
+- Backend now returns proper `totalMeters` from workout aggregation
+- Frontend normalizes API response to handle both old and new formats
+- Avatar images now display correctly
 
-#### 3. UI Cleanup
+**Club invite code visibility** (`apps/mobile/src/screens/ClubDetailScreen.tsx`)
+- Invite code now only visible to club admins (not regular members)
 
-**FeedScreen** (`apps/mobile/src/screens/main/FeedScreen.tsx`)
-- Removed bell icon from header (was non-functional placeholder)
-- Removed `headerButton` style
+**Max 3 club admins** (`apps/backend/src/routes/clubs.ts`, `apps/mobile/src/screens/ClubDetailScreen.tsx`)
+- Added validation: cannot promote to admin if club already has 3
+- UI shows "X/3 Admins" badge and disables "Make Admin" when at limit
 
-**ProfileScreen** (`apps/mobile/src/screens/main/ProfileScreen.tsx`)
-- Removed entire Personal Bests section from UI
-- Removed: `PersonalBest` interface, `pbs` state, `loadPbs` function
-- Removed: `pbCategories` array, `getPbValue` helper, `handlePbPress` function
-- Removed: `formatTime` helper (only used for PBs)
-- Removed styles: `pbGrid`, `pbItem`, `pbLabel`, `pbValue`
+**TypeScript fix** (`apps/backend/src/routes/auth.ts`)
+- Fixed `email` → `normalizedEmail` variable reference in catch block
 
 ---
 
 ## IN PROGRESS
 
-### EAS Build 33
+### EAS Build 44
 - **Status**: Building
-- **Build ID**: `4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a`
-- **URL**: https://expo.dev/accounts/stevemilton/projects/utx/builds/4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a
-- **Next Step**: Submit to Apple TestFlight when build completes
+- **Build ID**: `e6c57ba3-87d4-4d6a-b425-0a1ef93c477a`
+- **URL**: https://expo.dev/accounts/stevemilton/projects/utx/builds/e6c57ba3-87d4-4d6a-b425-0a1ef93c477a
+- **Auto-Submit**: Enabled - will submit to TestFlight automatically
 
 ---
 
 ## BROKEN/BLOCKED
 
-None known. All TypeScript checks pass.
-
-**Note**: Database migration needs to be run on production:
-```bash
-# The migration file exists but may need to be applied to Railway DB
-# Check if Railway auto-runs migrations or if manual execution needed
-```
+None known. All TypeScript checks pass. Backend builds successfully.
 
 ---
 
@@ -87,9 +78,9 @@ None known. All TypeScript checks pass.
 
 | Target | Status | Details |
 |--------|--------|---------|
-| GitHub | ✅ Pushed | Commit `7b949a9` on `main` |
+| GitHub | ✅ Pushed | Commit `0f1279a` on `main` |
 | Railway | ✅ Auto-deploying | Triggered by push to `main` |
-| EAS Build 33 | 🔄 Building | Build ID: `4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a` |
+| EAS Build 44 | 🔄 Building | Auto-submit to TestFlight enabled |
 
 ---
 
@@ -98,11 +89,8 @@ None known. All TypeScript checks pass.
 ```bash
 cd /Users/stevemilton/utx
 
-# Check EAS build 33 status
+# Check EAS build 44 status
 eas build:list --platform ios --limit 1
-
-# If build complete, submit to Apple:
-eas submit --platform ios --id 4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a
 
 # Check Railway deployment health
 curl https://utx-production.up.railway.app/health
@@ -118,9 +106,10 @@ cd apps/backend && npm run dev
 
 ## NEXT TASKS
 
-1. **Submit Build 33 to TestFlight** - once EAS build completes
-2. **Test machine type selector** - verify Row/Bike/Ski persists correctly
-3. **Verify database migration** - ensure MachineType enum is applied to Railway DB
+1. **Test Squad Management** - Verify squad creation, joining, and leaving works
+2. **Test Feed Fix** - Confirm feed only shows followed users' workouts
+3. **Test Strava Connection** - Verify button updates to "Connected" immediately
+4. **Test User Profile** - Verify avatar and stats display correctly
 
 ---
 
@@ -128,13 +117,16 @@ cd apps/backend && npm run dev
 
 | File | Changes |
 |------|---------|
-| `apps/backend/prisma/schema.prisma` | Added MachineType enum (lines 128-132) |
-| `apps/backend/src/routes/workouts.ts` | machineType handling (lines 14, 34, 69-73, 267, 571) |
-| `apps/mobile/src/screens/main/AddWorkoutScreen.tsx` | Selector UI, disabled Take Photo |
-| `apps/mobile/src/screens/WorkoutDetailScreen.tsx` | Machine type indicator |
-| `apps/mobile/src/screens/main/FeedScreen.tsx` | Removed bell icon |
-| `apps/mobile/src/screens/main/ProfileScreen.tsx` | Removed Personal Bests section |
-| `apps/mobile/src/stores/workoutStore.ts` | Added machineType to interface |
+| `apps/backend/src/routes/clubs.ts` | Squad endpoints, max 3 admins, isMember flag |
+| `apps/backend/src/routes/feed.ts` | Feed now follows-only |
+| `apps/backend/src/routes/users.ts` | totalMeters aggregation |
+| `apps/backend/src/routes/auth.ts` | TypeScript fix |
+| `apps/mobile/src/screens/ClubDetailScreen.tsx` | Squad UI, create modal, admin-only invite code |
+| `apps/mobile/src/screens/SquadDetailScreen.tsx` | Fixed interface, member list |
+| `apps/mobile/src/screens/UserProfileScreen.tsx` | Avatar display, stats normalization |
+| `apps/mobile/src/screens/main/ProfileScreen.tsx` | Strava status refresh |
+| `apps/mobile/App.tsx` | Strava connected state update |
+| `apps/mobile/src/constants/api.ts` | Squad endpoint paths |
 
 ---
 
@@ -145,5 +137,5 @@ cd apps/backend && npm run dev
 | Railway Dashboard | https://railway.com/project/02eb8439-e51a-4d38-8dca-4358a8a67046 |
 | Backend Health | https://utx-production.up.railway.app/health |
 | EAS Builds | https://expo.dev/accounts/stevemilton/projects/utx/builds |
-| Build 33 | https://expo.dev/accounts/stevemilton/projects/utx/builds/4f2ad1b1-69d0-4cc2-a85f-8dc1d7ce803a |
+| Build 44 | https://expo.dev/accounts/stevemilton/projects/utx/builds/e6c57ba3-87d4-4d6a-b425-0a1ef93c477a |
 | TestFlight | https://appstoreconnect.apple.com/apps/6758580968/testflight/ios |

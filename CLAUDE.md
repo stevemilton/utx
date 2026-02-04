@@ -43,6 +43,7 @@ This project uses multiple git worktrees for parallel development:
 - `loving-visvesvarata` - Earlier feature branch
 - `ecstatic-satoshi` - Earlier feature branch
 - `affectionate-williams` - Current active branch (Build 31+)
+- `quizzical-euclid` - Build 44 (Squad Management)
 
 ---
 
@@ -119,7 +120,8 @@ The app supports THREE auth methods:
 ### Key Mobile Files
 - `src/screens/auth/` - Auth screens (EmailLogin, EmailSignup, ForgotPassword, ResetPassword, VerifyEmail)
 - `src/screens/main/ProfileScreen.tsx` - Profile with Reset Password modal
-- `src/screens/ClubDetailScreen.tsx` - Club view with admin features
+- `src/screens/ClubDetailScreen.tsx` - Club view with admin features, squad management
+- `src/screens/SquadDetailScreen.tsx` - Squad view with member list
 - `src/screens/ClubSearchScreen.tsx` - Search clubs, join by invite code
 - `src/screens/CreateClubScreen.tsx` - Create new club flow
 - `src/stores/authStore.ts` - Zustand auth state management
@@ -128,7 +130,7 @@ The app supports THREE auth methods:
 
 ### Key Backend Files
 - `src/routes/auth.ts` - All auth endpoints
-- `src/routes/clubs.ts` - Club CRUD, membership, join requests
+- `src/routes/clubs.ts` - Club CRUD, membership, join requests, squad management
 - `src/routes/admin.ts` - Platform admin routes (club verification)
 - `src/services/email.ts` - Resend email service (auth + club notifications)
 - `prisma/schema.prisma` - Database schema with auth fields
@@ -171,14 +173,14 @@ The app supports THREE auth methods:
 
 ### Club Endpoints
 - `POST /clubs` - Create club (starts unverified)
-- `GET /clubs/:id` - Get club details
+- `GET /clubs/:id` - Get club details (includes squads with isMember flag)
 - `PATCH /clubs/:id` - Update club (admin only)
 - `DELETE /clubs/:id` - Delete club (admin only)
 - `POST /clubs/join` - Join by invite code
 - `POST /clubs/:id/request` - Request to join
 - `GET /clubs/:id/members` - List members (member only)
 - `DELETE /clubs/:id/members/:userId` - Remove member (admin only)
-- `PATCH /clubs/:id/members/:userId` - Change role (admin only)
+- `PATCH /clubs/:id/members/:userId` - Change role (admin only, max 3 admins)
 - `POST /clubs/:id/regenerate-code` - New invite code (admin only)
 
 ### Platform Admin Endpoints
@@ -189,8 +191,30 @@ Requires `x-admin-key` header matching `ADMIN_API_KEY` env var:
 - `GET /admin/clubs` - List all clubs with filters
 
 ### Club Roles
-- `admin` - Can manage members, edit club, regenerate code
-- `member` - Can view club, see invite code, leave
+- `admin` - Can manage members, edit club, regenerate code, create squads (max 3 admins per club)
+- `member` - Can view club, leave, join/leave squads
+
+---
+
+## Squad Management (Build 44)
+
+### Squad Endpoints
+- `POST /clubs/:id/squads` - Create squad (club admin only)
+- `GET /clubs/:id/squads` - List squads for a club
+- `GET /clubs/squads/:squadId` - Get squad details with member list
+- `POST /clubs/squads/:squadId/join` - Join squad (club members only)
+- `POST /clubs/squads/:squadId/leave` - Leave squad
+- `POST /clubs/squads/join` - Join squad by invite code (also joins club if not member)
+
+### Squad Roles
+- `captain` - Squad leader (shown with badge)
+- `member` - Regular squad member
+
+### UI Features
+- Squads section on ClubDetailScreen with Join/Leave buttons
+- "Create Squad" button for club admins
+- SquadDetailScreen shows member list with captain badges
+- Non-club members see notice to join club first
 
 ---
 
@@ -222,3 +246,13 @@ Requires `x-admin-key` header matching `ADMIN_API_KEY` env var:
 ### Removed Features
 - **Bell Icon**: Removed from FeedScreen header (was non-functional placeholder)
 - **Personal Bests Section**: Removed from ProfileScreen entirely
+
+---
+
+## Feed Behavior (Build 44)
+
+The Feed shows workouts from:
+- The current user's own workouts
+- Workouts from users the current user follows
+
+It does NOT show all public workouts - only followed users' content.
