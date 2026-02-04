@@ -56,6 +56,13 @@ module.exports = {
           photosPermission: 'Allow UTx to access your photos to upload erg screen images',
         },
       ],
+      [
+        '@sentry/react-native/expo',
+        {
+          organization: 'polar-industries',
+          project: 'utx',
+        },
+      ],
     ],
     extra: {
       eas: {

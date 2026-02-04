@@ -1,101 +1,33 @@
-import React, { useEffect, Component, ErrorInfo, ReactNode, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions, useNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
+import * as Sentry from '@sentry/react-native';
 import { RootNavigator } from './src/navigation';
 import { useAuthStore } from './src/stores/authStore';
 import { colors } from './src/constants/theme';
 import { api } from './src/services/api';
 import type { RootStackParamList } from './src/navigation/types';
 
+// Initialize Sentry
+Sentry.init({
+  dsn: 'https://8fb813926bef37f769bf658d2615196a@o4510827006197760.ingest.de.sentry.io/4510827029266512',
+  sendDefaultPii: true,
+  tracesSampleRate: 1.0,
+  environment: __DEV__ ? 'development' : 'production',
+});
+
 // Keep splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Ignore errors from preventAutoHideAsync
 });
 
-// Error Boundary Component
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-interface ErrorBoundaryProps {
-  children: ReactNode;
-}
-
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('App Error:', error, errorInfo);
-  }
-
-  handleRetry = () => {
-    this.setState({ hasError: false, error: null });
-  };
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={errorStyles.container}>
-          <Text style={errorStyles.title}>Something went wrong</Text>
-          <Text style={errorStyles.message}>
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </Text>
-          <TouchableOpacity style={errorStyles.button} onPress={this.handleRetry}>
-            <Text style={errorStyles.buttonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-const errorStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  message: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  button: {
-    backgroundColor: '#0D4F4F', // Petrol blue
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});
+// Create navigation integration for Sentry
+const routingInstrumentation = Sentry.reactNavigationIntegration();
 
 // Deep linking configuration
 const linking: LinkingOptions<RootStackParamList> = {
@@ -110,6 +42,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 function AppContent() {
   const { isLoading, setLoading, isAuthenticated } = useAuthStore();
   const handledCallbackRef = useRef(false);
+  const navigationRef = useNavigationContainerRef();
 
   // Handle Strava OAuth callback
   useEffect(() => {
@@ -206,6 +139,10 @@ function AppContent() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            routingInstrumentation.registerNavigationContainer(navigationRef);
+          }}
           linking={linking}
           theme={{
             dark: true,
@@ -233,10 +170,8 @@ function AppContent() {
   );
 }
 
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
-  );
+function App() {
+  return <AppContent />;
 }
+
+export default Sentry.wrap(App);
