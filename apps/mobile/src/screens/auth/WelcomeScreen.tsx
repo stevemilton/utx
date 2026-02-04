@@ -14,9 +14,11 @@ export const WelcomeScreen: React.FC = () => {
       <View style={styles.content}>
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoPlaceholder}>
-            <Text style={styles.logoText}>UTx</Text>
-          </View>
+          <Image
+            source={require('../../../assets/icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Tagline */}
@@ -64,18 +66,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: spacing.xl,
   },
-  logoPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoText: {
-    fontSize: 36,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
+  logo: {
+    width: 140,
+    height: 140,
+    borderRadius: 28,
   },
   tagline: {
     fontSize: fontSize.xxl,
