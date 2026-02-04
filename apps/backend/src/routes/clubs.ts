@@ -2,6 +2,14 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { sendClubCreatedNotification, sendJoinApprovedEmail, sendJoinRejectedEmail } from '../services/email';
+import {
+  createClubSchema,
+  joinClubSchema,
+  joinRequestSchema,
+  rejectRequestSchema,
+  changeMemberRoleSchema,
+} from '../schemas/index.js';
+import { validateBody } from '../utils/validate.js';
 
 // Generate a random invite code
 function generateInviteCode(): string {
@@ -149,14 +157,12 @@ export async function clubsRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const userId = request.authUser!.id;
-    const { name, location } = request.body;
 
-    if (!name || name.trim().length < 2) {
-      return reply.status(400).send({
-        success: false,
-        error: 'Club name must be at least 2 characters',
-      });
-    }
+    // Validate inputs with Zod
+    const validated = validateBody(createClubSchema, request.body, reply);
+    if (!validated) return;
+
+    const { name, location } = validated;
 
     // Check for similar names (fuzzy matching)
     const existingClub = await prisma.club.findFirst({
@@ -233,10 +239,15 @@ export async function clubsRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const userId = request.authUser!.id;
-    const { inviteCode } = request.body;
+
+    // Validate inputs with Zod
+    const validated = validateBody(joinClubSchema, request.body, reply);
+    if (!validated) return;
+
+    const { inviteCode } = validated;
 
     const club = await prisma.club.findUnique({
-      where: { inviteCode: inviteCode.toUpperCase() },
+      where: { inviteCode },
     });
 
     if (!club) {
@@ -580,7 +591,12 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const userId = request.authUser!.id;
     const { id: clubId } = request.params;
-    const { message } = request.body || {};
+
+    // Validate inputs with Zod
+    const validated = validateBody(joinRequestSchema, request.body || {}, reply);
+    if (!validated) return;
+
+    const { message } = validated;
 
     // Check club exists
     const club = await prisma.club.findUnique({
@@ -819,7 +835,12 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const adminUserId = request.authUser!.id;
     const { id: clubId, requestId } = request.params;
-    const { reason } = request.body || {};
+
+    // Validate inputs with Zod
+    const validated = validateBody(rejectRequestSchema, request.body || {}, reply);
+    if (!validated) return;
+
+    const { reason } = validated;
 
     // Check admin permission
     const membership = await prisma.clubMembership.findUnique({
@@ -1170,14 +1191,12 @@ export async function clubsRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const adminId = request.authUser!.id;
     const { id: clubId, userId: targetUserId } = request.params;
-    const { role } = request.body;
 
-    if (!role || !['admin', 'member'].includes(role)) {
-      return reply.status(400).send({
-        success: false,
-        error: 'Invalid role. Must be "admin" or "member"',
-      });
-    }
+    // Validate inputs with Zod
+    const validated = validateBody(changeMemberRoleSchema, request.body, reply);
+    if (!validated) return;
+
+    const { role } = validated;
 
     // Check if requester is admin
     const adminMembership = await prisma.clubMembership.findUnique({

@@ -3,6 +3,8 @@ import { WorkoutType, PbCategory, MachineType } from '@prisma/client';
 import OpenAI from 'openai';
 import { calculateEffortScore, calculateUtxEffortScore, type UserProfile, type Interval } from '../utils/effortScore.js';
 import { generateCoachingInsight } from '../utils/aiCoaching.js';
+import { createWorkoutSchema, updateWorkoutSchema, commentSchema } from '../schemas/index.js';
+import { validateBody } from '../utils/validate.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -185,43 +187,10 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Body: CreateWorkoutBody }>, reply: FastifyReply) => {
       const userId = request.authUser!.id;
-      const data = request.body;
 
-      // Input validation
-      if (!data.totalTimeSeconds || data.totalTimeSeconds <= 0 || data.totalTimeSeconds > 86400) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Invalid total time (must be between 1 second and 24 hours)',
-        });
-      }
-
-      if (!data.totalDistanceMetres || data.totalDistanceMetres <= 0 || data.totalDistanceMetres > 100000) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Invalid distance (must be between 1m and 100km)',
-        });
-      }
-
-      if (data.avgStrokeRate && (data.avgStrokeRate < 10 || data.avgStrokeRate > 60)) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Invalid stroke rate (must be between 10 and 60 SPM)',
-        });
-      }
-
-      if (data.avgHeartRate && (data.avgHeartRate < 30 || data.avgHeartRate > 250)) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Invalid heart rate (must be between 30 and 250 BPM)',
-        });
-      }
-
-      if (data.maxHeartRate && (data.maxHeartRate < 30 || data.maxHeartRate > 250)) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Invalid max heart rate (must be between 30 and 250 BPM)',
-        });
-      }
+      // Validate inputs with Zod
+      const data = validateBody(createWorkoutSchema, request.body, reply);
+      if (!data) return;
 
       // Get user for effort score calculation and AI coaching
       const user = await server.prisma.user.findUnique({
@@ -585,6 +554,11 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     ) => {
       const { workoutId } = request.params;
       const userId = request.authUser!.id;
+
+      // Validate inputs with Zod
+      const validated = validateBody(updateWorkoutSchema, request.body, reply);
+      if (!validated) return;
+
       const {
         notes,
         workoutType,
@@ -598,7 +572,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
         maxHeartRate,
         calories,
         dragFactor,
-      } = request.body;
+      } = validated;
 
       const existing = await server.prisma.workout.findUnique({
         where: { id: workoutId },
@@ -623,7 +597,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
 
       if (notes !== undefined) updateData.notes = notes;
       if (workoutType !== undefined) updateData.workoutType = mapWorkoutType(workoutType);
-      if (workoutDate !== undefined) updateData.workoutDate = new Date(workoutDate);
+      if (workoutDate !== undefined && workoutDate !== null) updateData.workoutDate = new Date(workoutDate);
       if (totalDistanceMetres !== undefined) updateData.totalDistanceMetres = totalDistanceMetres;
       if (totalTimeSeconds !== undefined) updateData.totalTimeSeconds = totalTimeSeconds;
       if (avgSplit !== undefined) updateData.averageSplitSeconds = avgSplit;
@@ -820,31 +794,13 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       reply: FastifyReply
     ) => {
       const { workoutId } = request.params;
-      const { content } = request.body;
       const userId = request.authUser!.id;
 
-      // Input validation
-      if (!content || typeof content !== 'string') {
-        return reply.status(400).send({
-          success: false,
-          error: 'Comment content is required',
-        });
-      }
+      // Validate inputs with Zod
+      const validated = validateBody(commentSchema, request.body, reply);
+      if (!validated) return;
 
-      const trimmedContent = content.trim();
-      if (trimmedContent.length === 0) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Comment cannot be empty',
-        });
-      }
-
-      if (trimmedContent.length > 1000) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Comment cannot exceed 1000 characters',
-        });
-      }
+      const { content } = validated;
 
       const comment = await server.prisma.workoutComment.create({
         data: {

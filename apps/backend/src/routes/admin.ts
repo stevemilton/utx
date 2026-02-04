@@ -1,5 +1,24 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { timingSafeEqual } from 'crypto';
 import { sendClubVerifiedEmail, sendClubRejectedEmail, sendClubCreatedNotification } from '../services/email';
+
+/**
+ * Constant-time comparison of two strings to prevent timing attacks.
+ * Uses crypto.timingSafeEqual to ensure comparison time doesn't leak information.
+ */
+function safeCompare(a: string, b: string): boolean {
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+
+  // If lengths differ, we still perform a comparison to maintain constant time
+  if (aBuffer.length !== bBuffer.length) {
+    // Compare against itself to maintain timing consistency
+    timingSafeEqual(aBuffer, aBuffer);
+    return false;
+  }
+
+  return timingSafeEqual(aBuffer, bBuffer);
+}
 
 // Platform Admin Routes
 // Protected by ADMIN_API_KEY or user with isSuperAdmin=true
@@ -10,10 +29,14 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // Accepts either: 1) x-admin-key header, or 2) authenticated user with isSuperAdmin=true
   const superAdminAuth = async (request: FastifyRequest, reply: FastifyReply) => {
     // Option 1: API key auth (for scripts/automation)
-    const adminKey = request.headers['x-admin-key'];
+    const adminKeyHeader = request.headers['x-admin-key'];
     const expectedKey = process.env.ADMIN_API_KEY;
 
-    if (adminKey && expectedKey && adminKey === expectedKey) {
+    // Ensure adminKey is a string (headers can be string | string[] | undefined)
+    const adminKey = Array.isArray(adminKeyHeader) ? adminKeyHeader[0] : adminKeyHeader;
+
+    // Use constant-time comparison to prevent timing attacks
+    if (adminKey && expectedKey && safeCompare(adminKey, expectedKey)) {
       return; // Authorized via API key
     }
 

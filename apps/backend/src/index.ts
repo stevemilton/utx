@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
 import jwt from '@fastify/jwt';
 import { PrismaClient } from '@prisma/client';
@@ -44,6 +45,18 @@ const server = Fastify({
 server.register(cors, {
   origin: true, // Allow all origins in development
   credentials: true,
+});
+
+// Global rate limiting - prevent DoS attacks
+server.register(rateLimit, {
+  global: true,
+  max: 100, // 100 requests per minute per IP
+  timeWindow: '1 minute',
+  errorResponseBuilder: (_request, context) => ({
+    success: false,
+    error: 'Too many requests. Please slow down.',
+    retryAfter: context.after,
+  }),
 });
 
 server.register(multipart, {
