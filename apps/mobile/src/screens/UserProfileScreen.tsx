@@ -27,6 +27,7 @@ interface UserProfile {
   followersCount: number;
   followingCount: number;
   isFollowing: boolean;
+  isPrivate?: boolean;
   pbs?: {
     two_thousand?: { time: number };
     five_thousand?: { time: number };
@@ -195,31 +196,44 @@ export const UserProfileScreen: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{profile.totalWorkouts}</Text>
-            <Text style={styles.statLabel}>Workouts</Text>
+        {/* Private Profile Notice */}
+        {profile.isPrivate && (
+          <View style={styles.privateProfileContainer}>
+            <Ionicons name="lock-closed" size={48} color={colors.textTertiary} />
+            <Text style={styles.privateProfileTitle}>This Profile is Private</Text>
+            <Text style={styles.privateProfileText}>
+              Follow this user to see their stats, workouts, and personal bests.
+            </Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatDistance(profile.totalMeters)}</Text>
-            <Text style={styles.statLabel}>Total Distance</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{profile.followersCount}</Text>
-            <Text style={styles.statLabel}>Followers</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{profile.followingCount}</Text>
-            <Text style={styles.statLabel}>Following</Text>
-          </View>
-        </View>
+        )}
 
-        {/* Personal Bests */}
-        {profile.pbs && (profile.pbs.two_thousand || profile.pbs.five_thousand) && (
+        {/* Stats - only show if not private */}
+        {!profile.isPrivate && (
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{profile.totalWorkouts}</Text>
+              <Text style={styles.statLabel}>Workouts</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{formatDistance(profile.totalMeters)}</Text>
+              <Text style={styles.statLabel}>Total Distance</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{profile.followersCount}</Text>
+              <Text style={styles.statLabel}>Followers</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{profile.followingCount}</Text>
+              <Text style={styles.statLabel}>Following</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Personal Bests - only show if not private */}
+        {!profile.isPrivate && profile.pbs && (profile.pbs.two_thousand || profile.pbs.five_thousand) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Personal Bests</Text>
             <View style={styles.pbsContainer}>
@@ -392,5 +406,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.primary,
+  },
+  privateProfileContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+  },
+  privateProfileTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  privateProfileText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

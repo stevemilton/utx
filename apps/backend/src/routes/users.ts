@@ -272,6 +272,7 @@ export async function usersRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.authenticate] },
     async (request: FastifyRequest<{ Params: UserParams }>, reply: FastifyReply) => {
       const { userId } = request.params;
+      const currentUserId = request.authUser!.id;
 
       const user = await server.prisma.user.findUnique({
         where: { id: userId },
@@ -279,6 +280,7 @@ export async function usersRoutes(server: FastifyInstance): Promise<void> {
           id: true,
           name: true,
           avatarUrl: true,
+          isPublic: true,
           heightCm: true,
           weightKg: true,
           createdAt: true,
@@ -300,9 +302,48 @@ export async function usersRoutes(server: FastifyInstance): Promise<void> {
         });
       }
 
+      // Check if current user is viewing their own profile
+      const isOwnProfile = currentUserId === userId;
+
+      // Check if current user follows this user
+      let isFollowing = false;
+      if (!isOwnProfile) {
+        const followRecord = await server.prisma.follow.findUnique({
+          where: {
+            followerId_followingId: {
+              followerId: currentUserId,
+              followingId: userId,
+            },
+          },
+        });
+        isFollowing = !!followRecord;
+      }
+
+      // If profile is private and viewer is not the owner and not following, return limited data
+      if (!user.isPublic && !isOwnProfile && !isFollowing) {
+        return reply.send({
+          success: true,
+          data: {
+            id: user.id,
+            name: user.name,
+            avatarUrl: user.avatarUrl,
+            isPrivate: true,
+            isFollowing: false,
+            _count: {
+              followers: user._count.followers,
+              following: user._count.following,
+            },
+          },
+        });
+      }
+
       return reply.send({
         success: true,
-        data: user,
+        data: {
+          ...user,
+          isPrivate: false,
+          isFollowing,
+        },
       });
     }
   );
