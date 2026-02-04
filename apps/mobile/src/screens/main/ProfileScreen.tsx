@@ -54,6 +54,8 @@ export const ProfileScreen: React.FC = () => {
   const [clubSearchResults, setClubSearchResults] = useState<Club[]>([]);
   const [isSearchingClubs, setIsSearchingClubs] = useState(false);
   const [userClubs, setUserClubs] = useState<Club[]>([]);
+  const [requestedClubIds, setRequestedClubIds] = useState<Set<string>>(new Set());
+  const [joiningClubId, setJoiningClubId] = useState<string | null>(null);
 
   // Reset password modal state
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
@@ -177,11 +179,38 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleJoinClub = async (club: Club) => {
-    // TODO: Implement join club API call
-    setUserClubs([...userClubs, club]);
-    setShowClubModal(false);
-    setClubSearchQuery('');
-    setClubSearchResults([]);
+    if (requestedClubIds.has(club.id) || joiningClubId === club.id) return;
+
+    setJoiningClubId(club.id);
+
+    try {
+      const response = await api.requestToJoinClub(club.id);
+
+      if (response.success) {
+        // Mark as requested
+        setRequestedClubIds(prev => new Set([...prev, club.id]));
+        Alert.alert(
+          'Request Sent!',
+          `Your request to join ${club.name} has been submitted. You'll be notified when approved.`
+        );
+      } else {
+        // Handle already member or pending cases
+        if (response.error?.includes('already a member')) {
+          Alert.alert('Already a Member', `You're already a member of ${club.name}!`);
+          setRequestedClubIds(prev => new Set([...prev, club.id]));
+        } else if (response.error?.includes('pending')) {
+          Alert.alert('Request Pending', `You already have a pending request for ${club.name}.`);
+          setRequestedClubIds(prev => new Set([...prev, club.id]));
+        } else {
+          Alert.alert('Error', response.error || 'Failed to submit request');
+        }
+      }
+    } catch (error) {
+      console.error('Join club error:', error);
+      Alert.alert('Error', 'Failed to submit request. Please try again.');
+    } finally {
+      setJoiningClubId(null);
+    }
   };
 
   const handleLeaveClub = (clubId: string) => {
@@ -263,22 +292,42 @@ export const ProfileScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const renderClubSearchItem = ({ item }: { item: Club }) => (
-    <TouchableOpacity
-      style={styles.clubSearchItem}
-      onPress={() => handleJoinClub(item)}
-    >
-      <View style={styles.clubIcon}>
-        <Text style={styles.clubIconText}>{item.name.charAt(0)}</Text>
+  const renderClubSearchItem = ({ item }: { item: Club }) => {
+    const isRequested = requestedClubIds.has(item.id);
+    const isJoining = joiningClubId === item.id;
+
+    return (
+      <View style={styles.clubSearchItem}>
+        <View style={styles.clubIcon}>
+          <Text style={styles.clubIconText}>{item.name.charAt(0)}</Text>
+        </View>
+        <View style={styles.clubInfo}>
+          <Text style={styles.clubName}>{item.name}</Text>
+          {item.location && <Text style={styles.clubLocation}>{item.location}</Text>}
+          <Text style={styles.clubMembers}>{item.memberCount} members</Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.joinButton,
+            isRequested && styles.joinButtonRequested,
+          ]}
+          onPress={() => handleJoinClub(item)}
+          disabled={isRequested || isJoining}
+        >
+          {isJoining ? (
+            <ActivityIndicator size="small" color={colors.textInverse} />
+          ) : (
+            <Text style={[
+              styles.joinButtonText,
+              isRequested && styles.joinButtonTextRequested,
+            ]}>
+              {isRequested ? 'Requested' : 'Join'}
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
-      <View style={styles.clubInfo}>
-        <Text style={styles.clubName}>{item.name}</Text>
-        {item.location && <Text style={styles.clubLocation}>{item.location}</Text>}
-        <Text style={styles.clubMembers}>{item.memberCount} members</Text>
-      </View>
-      <Text style={styles.joinText}>Join</Text>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -1028,10 +1077,26 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  joinText: {
+  joinButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  joinButtonRequested: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  joinButtonText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    color: colors.primary,
+    color: colors.textInverse,
+  },
+  joinButtonTextRequested: {
+    color: colors.textSecondary,
   },
   searchHelpContainer: {
     flex: 1,
