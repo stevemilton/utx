@@ -301,6 +301,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
           effortZone: utxResult.zone, // recovery | building | training | peak
           effortBreakdown: utxResult.breakdown as any, // { cardiacLoad, workOutput, pacing, economy }
           notes: data.notes,
+          isPublic: data.isPublic ?? false,
           workoutDate: data.workoutDate ? new Date(data.workoutDate) : new Date(),
         },
         include: {

@@ -97,6 +97,7 @@ model Workout {
   squadId             String?
   squad               Squad?              @relation(fields: [squadId], references: [id])
   notes               String?
+  isPublic            Boolean             @default(false)
   workoutDate         DateTime
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
