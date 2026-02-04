@@ -59,12 +59,10 @@ module.exports = {
       [
         '@sentry/react-native/expo',
         {
-          organization: 'polar-industries',
-          project: 'utx',
-          // Disable source map upload until auth token is configured in EAS
-          // Set SENTRY_AUTH_TOKEN in EAS env vars to enable
-          uploadNativeSymbols: process.env.SENTRY_AUTH_TOKEN ? true : false,
-          autoUploadSourceMaps: process.env.SENTRY_AUTH_TOKEN ? true : false,
+          organization: 'polar-industries-ltd',
+          project: 'node',
+          uploadNativeSymbols: true,
+          autoUploadSourceMaps: true,
         },
       ],
     ],
