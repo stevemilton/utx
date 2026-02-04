@@ -954,7 +954,7 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
         request.log.error(error, 'Email login failed');
         Sentry.captureException(error, {
           tags: { route: 'login-email' },
-          extra: { email: email?.substring(0, 3) + '***' },
+          extra: { email: normalizedEmail?.substring(0, 3) + '***' },
         });
         return reply.status(500).send({
           success: false,

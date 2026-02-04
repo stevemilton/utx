@@ -28,6 +28,7 @@ interface Squad {
   id: string;
   name: string;
   memberCount: number;
+  isMember?: boolean;
 }
 
 interface ClubMember {
@@ -61,6 +62,7 @@ interface Club {
   isMember: boolean;
   userRole?: 'admin' | 'member';
   pendingRequestCount?: number;
+  adminCount?: number;
   userJoinRequest?: JoinRequest;
 }
 
@@ -84,6 +86,13 @@ export const ClubDetailScreen: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<ClubMember | null>(null);
   const [showMemberActions, setShowMemberActions] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Squad management state
+  const [showCreateSquadModal, setShowCreateSquadModal] = useState(false);
+  const [newSquadName, setNewSquadName] = useState('');
+  const [creatingSquad, setCreatingSquad] = useState(false);
+  const [joiningSquadId, setJoiningSquadId] = useState<string | null>(null);
+  const [leavingSquadId, setLeavingSquadId] = useState<string | null>(null);
 
   const fetchClub = useCallback(async () => {
     try {
@@ -426,6 +435,94 @@ export const ClubDetailScreen: React.FC = () => {
     }
   };
 
+  // Squad management handlers
+  const handleCreateSquad = async () => {
+    if (!newSquadName.trim()) {
+      Alert.alert('Error', 'Squad name is required');
+      return;
+    }
+
+    setCreatingSquad(true);
+    try {
+      const response = await api.createSquad(clubId, { name: newSquadName.trim() });
+      if (response.success && response.data) {
+        const newSquad = response.data as { id: string; name: string };
+        setClub((prev) => prev ? {
+          ...prev,
+          squads: [...prev.squads, { id: newSquad.id, name: newSquad.name, memberCount: 0, isMember: false }],
+        } : null);
+        setShowCreateSquadModal(false);
+        setNewSquadName('');
+        Alert.alert('Success', `Squad "${newSquad.name}" created!`);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to create squad');
+      }
+    } catch (error) {
+      console.error('Error creating squad:', error);
+      Alert.alert('Error', 'Failed to create squad');
+    } finally {
+      setCreatingSquad(false);
+    }
+  };
+
+  const handleJoinSquad = async (squadId: string, squadName: string) => {
+    setJoiningSquadId(squadId);
+    try {
+      const response = await api.joinSquad(squadId);
+      if (response.success) {
+        setClub((prev) => prev ? {
+          ...prev,
+          squads: prev.squads.map(s =>
+            s.id === squadId ? { ...s, isMember: true, memberCount: s.memberCount + 1 } : s
+          ),
+        } : null);
+        Alert.alert('Joined!', `You're now a member of ${squadName}`);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to join squad');
+      }
+    } catch (error) {
+      console.error('Error joining squad:', error);
+      Alert.alert('Error', 'Failed to join squad');
+    } finally {
+      setJoiningSquadId(null);
+    }
+  };
+
+  const handleLeaveSquad = async (squadId: string, squadName: string) => {
+    Alert.alert(
+      'Leave Squad',
+      `Are you sure you want to leave ${squadName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            setLeavingSquadId(squadId);
+            try {
+              const response = await api.leaveSquad(squadId);
+              if (response.success) {
+                setClub((prev) => prev ? {
+                  ...prev,
+                  squads: prev.squads.map(s =>
+                    s.id === squadId ? { ...s, isMember: false, memberCount: Math.max(0, s.memberCount - 1) } : s
+                  ),
+                } : null);
+              } else {
+                Alert.alert('Error', response.error || 'Failed to leave squad');
+              }
+            } catch (error) {
+              console.error('Error leaving squad:', error);
+              Alert.alert('Error', 'Failed to leave squad');
+            } finally {
+              setLeavingSquadId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleMemberPress = (member: ClubMember) => {
     if (club?.userRole !== 'admin') {
       navigateToProfile(member.id);
@@ -695,8 +792,8 @@ export const ClubDetailScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Invite Code & Admin Actions */}
-        {club.isMember && (
+        {/* Invite Code & Admin Actions - Only visible to admins */}
+        {club.userRole === 'admin' && (
           <View style={styles.inviteSection}>
             <Text style={styles.sectionTitle}>Invite Code</Text>
             <View style={styles.inviteCodeContainer}>
@@ -710,33 +807,29 @@ export const ClubDetailScreen: React.FC = () => {
             </Text>
 
             {/* Admin: Manage Requests Link */}
-            {club.userRole === 'admin' && (
-              <TouchableOpacity
-                style={styles.manageRequestsButton}
-                onPress={navigateToJoinRequests}
-              >
-                <Ionicons name="people-outline" size={18} color={colors.primary} />
-                <Text style={styles.manageRequestsText}>Manage Join Requests</Text>
-                {club.pendingRequestCount && club.pendingRequestCount > 0 && (
-                  <View style={styles.requestCountBadge}>
-                    <Text style={styles.requestCountText}>{club.pendingRequestCount}</Text>
-                  </View>
-                )}
-                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.manageRequestsButton}
+              onPress={navigateToJoinRequests}
+            >
+              <Ionicons name="people-outline" size={18} color={colors.primary} />
+              <Text style={styles.manageRequestsText}>Manage Join Requests</Text>
+              {club.pendingRequestCount && club.pendingRequestCount > 0 && (
+                <View style={styles.requestCountBadge}>
+                  <Text style={styles.requestCountText}>{club.pendingRequestCount}</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
 
             {/* Admin: Regenerate Code */}
-            {club.userRole === 'admin' && (
-              <TouchableOpacity
-                style={styles.regenerateCodeButton}
-                onPress={handleRegenerateCode}
-                disabled={actionLoading}
-              >
-                <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
-                <Text style={styles.regenerateCodeText}>Regenerate Invite Code</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.regenerateCodeButton}
+              onPress={handleRegenerateCode}
+              disabled={actionLoading}
+            >
+              <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.regenerateCodeText}>Regenerate Invite Code</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -789,7 +882,17 @@ export const ClubDetailScreen: React.FC = () => {
         {/* Admin: Club Settings */}
         {club.userRole === 'admin' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Club Settings</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Club Settings</Text>
+              {club.adminCount !== undefined && (
+                <View style={styles.adminCountBadge}>
+                  <Ionicons name="shield" size={12} color={colors.primary} />
+                  <Text style={styles.adminCountText}>
+                    {club.adminCount}/3 Admins
+                  </Text>
+                </View>
+              )}
+            </View>
             <TouchableOpacity style={styles.settingItem} onPress={handleEditClub}>
               <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
               <Text style={styles.settingText}>Edit Club Details</Text>
@@ -807,24 +910,72 @@ export const ClubDetailScreen: React.FC = () => {
         )}
 
         {/* Squads */}
-        {club.squads && club.squads.length > 0 && (
+        {club.isMember && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Squads</Text>
-            {club.squads.map((squad) => (
-              <TouchableOpacity
-                key={squad.id}
-                style={styles.squadItem}
-                onPress={() => navigateToSquad(squad.id)}
-              >
-                <View style={styles.squadInfo}>
-                  <Text style={styles.squadName}>{squad.name}</Text>
-                  <Text style={styles.squadMembers}>
-                    {squad.memberCount} {squad.memberCount === 1 ? 'member' : 'members'}
-                  </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Squads</Text>
+              {club.userRole === 'admin' && (
+                <TouchableOpacity
+                  style={styles.createSquadButton}
+                  onPress={() => setShowCreateSquadModal(true)}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                  <Text style={styles.createSquadButtonText}>Create Squad</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {club.squads && club.squads.length > 0 ? (
+              club.squads.map((squad) => (
+                <View key={squad.id} style={styles.squadItem}>
+                  <TouchableOpacity
+                    style={styles.squadTouchable}
+                    onPress={() => navigateToSquad(squad.id)}
+                  >
+                    <View style={styles.squadInfo}>
+                      <Text style={styles.squadName}>{squad.name}</Text>
+                      <Text style={styles.squadMembers}>
+                        {squad.memberCount} {squad.memberCount === 1 ? 'member' : 'members'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  {squad.isMember ? (
+                    <TouchableOpacity
+                      style={styles.leaveSquadButton}
+                      onPress={() => handleLeaveSquad(squad.id, squad.name)}
+                      disabled={leavingSquadId === squad.id}
+                    >
+                      {leavingSquadId === squad.id ? (
+                        <ActivityIndicator size="small" color={colors.error} />
+                      ) : (
+                        <Text style={styles.leaveSquadText}>Leave</Text>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.joinSquadButton}
+                      onPress={() => handleJoinSquad(squad.id, squad.name)}
+                      disabled={joiningSquadId === squad.id}
+                    >
+                      {joiningSquadId === squad.id ? (
+                        <ActivityIndicator size="small" color={colors.white} />
+                      ) : (
+                        <Text style={styles.joinSquadText}>Join</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
-            ))}
+              ))
+            ) : (
+              <View style={styles.emptySquadsContainer}>
+                <Ionicons name="people-outline" size={32} color={colors.textTertiary} />
+                <Text style={styles.emptySquadsText}>No squads yet</Text>
+                {club.userRole === 'admin' && (
+                  <Text style={styles.emptySquadsHint}>
+                    Create squads to organize your athletes
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
         )}
 
@@ -924,15 +1075,29 @@ export const ClubDetailScreen: React.FC = () => {
             </TouchableOpacity>
 
             {selectedMember?.role === 'member' && (
-              <TouchableOpacity
-                style={styles.actionSheetItem}
-                onPress={() => handleChangeRole('admin')}
-              >
-                <Ionicons name="shield-outline" size={20} color={colors.primary} />
-                <Text style={[styles.actionSheetText, { color: colors.primary }]}>
-                  Make Admin
-                </Text>
-              </TouchableOpacity>
+              club.adminCount !== undefined && club.adminCount >= 3 ? (
+                <View style={[styles.actionSheetItem, styles.actionSheetDisabled]}>
+                  <Ionicons name="shield-outline" size={20} color={colors.textTertiary} />
+                  <View style={styles.actionSheetItemContent}>
+                    <Text style={[styles.actionSheetText, styles.disabledText]}>
+                      Make Admin
+                    </Text>
+                    <Text style={styles.actionSheetHint}>
+                      Maximum 3 admins reached
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.actionSheetItem}
+                  onPress={() => handleChangeRole('admin')}
+                >
+                  <Ionicons name="shield-outline" size={20} color={colors.primary} />
+                  <Text style={[styles.actionSheetText, { color: colors.primary }]}>
+                    Make Admin
+                  </Text>
+                </TouchableOpacity>
+              )
             )}
 
             {selectedMember?.role === 'admin' && (
@@ -961,6 +1126,41 @@ export const ClubDetailScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Create Squad Modal */}
+      <Modal
+        visible={showCreateSquadModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCreateSquadModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowCreateSquadModal(false)}>
+              <Text style={styles.modalCancel}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Create Squad</Text>
+            <TouchableOpacity onPress={handleCreateSquad} disabled={creatingSquad}>
+              {creatingSquad ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Text style={styles.modalSave}>Create</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          <View style={styles.modalContent}>
+            <Input
+              label="Squad Name"
+              value={newSquadName}
+              onChangeText={setNewSquadName}
+              placeholder="e.g., Men's 1st VIII, Women's U19, Masters"
+            />
+            <Text style={styles.squadHelpText}>
+              Squads help organize athletes within your club by team, age group, or training level.
+            </Text>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -1250,6 +1450,20 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
+  adminCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primarySubtle,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  adminCountText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
   squadItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1257,6 +1471,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
+  },
+  squadTouchable: {
+    flex: 1,
   },
   squadInfo: {
     flex: 1,
@@ -1270,6 +1487,67 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  createSquadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  createSquadButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  joinSquadButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  joinSquadText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
+  },
+  leaveSquadButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.error,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  leaveSquadText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.error,
+  },
+  emptySquadsContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+  },
+  emptySquadsText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  emptySquadsHint: {
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  squadHelpText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    lineHeight: 20,
   },
   chevron: {
     fontSize: 24,
@@ -1454,6 +1732,20 @@ const styles = StyleSheet.create({
   actionSheetText: {
     fontSize: fontSize.md,
     color: colors.textPrimary,
+  },
+  actionSheetItemContent: {
+    flex: 1,
+  },
+  actionSheetHint: {
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  actionSheetDisabled: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: colors.textTertiary,
   },
   actionSheetDanger: {
     marginTop: spacing.sm,

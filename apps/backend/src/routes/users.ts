@@ -329,20 +329,33 @@ export async function usersRoutes(server: FastifyInstance): Promise<void> {
             avatarUrl: user.avatarUrl,
             isPrivate: true,
             isFollowing: false,
-            _count: {
-              followers: user._count.followers,
-              following: user._count.following,
-            },
+            totalWorkouts: 0,
+            totalMeters: 0,
+            followersCount: user._count.followers,
+            followingCount: user._count.following,
           },
         });
       }
 
+      // Calculate total distance from all workouts
+      const distanceAgg = await server.prisma.workout.aggregate({
+        where: { userId },
+        _sum: { totalDistanceMetres: true },
+      });
+
       return reply.send({
         success: true,
         data: {
-          ...user,
+          id: user.id,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
           isPrivate: false,
           isFollowing,
+          totalWorkouts: user._count.workouts,
+          totalMeters: distanceAgg._sum.totalDistanceMetres || 0,
+          followersCount: user._count.followers,
+          followingCount: user._count.following,
+          pbs: user.personalBests,
         },
       });
     }

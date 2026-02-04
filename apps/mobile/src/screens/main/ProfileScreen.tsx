@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,11 @@ import {
   TextInput,
   FlatList,
   Modal,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../constants/theme';
 import { useAuthStore } from '../../stores/authStore';
@@ -64,16 +66,52 @@ export const ProfileScreen: React.FC = () => {
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
 
+  // Check Strava status from API (not just local state)
+  const checkStravaStatus = useCallback(async () => {
+    try {
+      const response = await api.getStravaStatus();
+      if (response.success && response.data) {
+        const connected = response.data.connected;
+        setStravaConnected(connected);
+        // Also update the auth store so it persists
+        if (connected !== user?.stravaConnected) {
+          updateProfile({ stravaConnected: connected });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking Strava status:', error);
+      // Fall back to local state if API fails
+      if (user?.stravaConnected) {
+        setStravaConnected(true);
+      }
+    }
+  }, [user?.stravaConnected, updateProfile]);
+
   useEffect(() => {
     checkStravaStatus();
     loadUserClubs();
   }, []);
 
-  const checkStravaStatus = async () => {
-    if (user?.stravaConnected) {
-      setStravaConnected(true);
-    }
-  };
+  // Re-check Strava status when returning from Strava OAuth (app comes back to foreground)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        // App came to foreground - check if Strava was just connected
+        checkStravaStatus();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [checkStravaStatus]);
+
+  // Also check when screen comes into focus (e.g., navigating back from settings)
+  useFocusEffect(
+    useCallback(() => {
+      checkStravaStatus();
+    }, [checkStravaStatus])
+  );
 
   const loadUserClubs = async () => {
     try {

@@ -74,6 +74,10 @@ export async function clubsRoutes(fastify: FastifyInstance) {
           select: {
             id: true,
             name: true,
+            memberships: {
+              where: { userId },
+              select: { id: true },
+            },
             _count: { select: { memberships: true } },
           },
         },
@@ -99,11 +103,19 @@ export async function clubsRoutes(fastify: FastifyInstance) {
 
     // Get pending request count for admins
     let pendingRequestCount = 0;
+    let adminCount = 0;
     if (isAdmin) {
       pendingRequestCount = await prisma.clubJoinRequest.count({
         where: {
           clubId: id,
           status: 'pending',
+        },
+      });
+      // Count admins for displaying admin limit (max 3)
+      adminCount = await prisma.clubMembership.count({
+        where: {
+          clubId: id,
+          role: 'admin',
         },
       });
     }
@@ -141,10 +153,12 @@ export async function clubsRoutes(fastify: FastifyInstance) {
           id: s.id,
           name: s.name,
           memberCount: s._count.memberships,
+          isMember: s.memberships.length > 0,
         })),
         userRole: userMembership?.role || null,
         isMember: !!userMembership,
         pendingRequestCount: isAdmin ? pendingRequestCount : undefined,
+        adminCount: isAdmin ? adminCount : undefined,
         userJoinRequest,
       },
     };
@@ -478,6 +492,193 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         clubId: squad.clubId,
         clubName: squad.club.name,
       },
+    };
+  });
+
+  // Get squad by ID
+  fastify.get<{ Params: { squadId: string } }>('/squads/:squadId', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const { squadId } = request.params;
+    const userId = request.authUser!.id;
+
+    const squad = await prisma.squad.findUnique({
+      where: { id: squadId },
+      include: {
+        club: {
+          select: {
+            id: true,
+            name: true,
+            verified: true,
+          },
+        },
+        memberships: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+              },
+            },
+          },
+          orderBy: [
+            { role: 'asc' }, // captains first
+            { joinedAt: 'asc' },
+          ],
+        },
+        _count: {
+          select: { memberships: true },
+        },
+      },
+    });
+
+    if (!squad) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Squad not found',
+      });
+    }
+
+    // Check if user is a member of the club
+    const clubMembership = await prisma.clubMembership.findUnique({
+      where: {
+        clubId_userId: {
+          clubId: squad.clubId,
+          userId,
+        },
+      },
+    });
+
+    // Check if user is a member of this squad
+    const squadMembership = squad.memberships.find(m => m.userId === userId);
+    const isClubAdmin = clubMembership?.role === 'admin';
+
+    return {
+      success: true,
+      data: {
+        id: squad.id,
+        name: squad.name,
+        inviteCode: isClubAdmin ? squad.inviteCode : undefined,
+        club: squad.club,
+        memberCount: squad._count.memberships,
+        members: squad.memberships.map(m => ({
+          id: m.user.id,
+          name: m.user.name,
+          avatarUrl: m.user.avatarUrl,
+          role: m.role,
+          joinedAt: m.joinedAt,
+        })),
+        userRole: squadMembership?.role || null,
+        isMember: !!squadMembership,
+        isClubMember: !!clubMembership,
+      },
+    };
+  });
+
+  // Join squad by ID (for club members viewing squad list)
+  fastify.post<{ Params: { squadId: string } }>('/squads/:squadId/join', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = request.authUser!.id;
+    const { squadId } = request.params;
+
+    const squad = await prisma.squad.findUnique({
+      where: { id: squadId },
+      include: { club: true },
+    });
+
+    if (!squad) {
+      return reply.status(404).send({
+        success: false,
+        error: 'Squad not found',
+      });
+    }
+
+    // Check if user is member of the club
+    const clubMembership = await prisma.clubMembership.findUnique({
+      where: {
+        clubId_userId: {
+          clubId: squad.clubId,
+          userId,
+        },
+      },
+    });
+
+    if (!clubMembership) {
+      return reply.status(403).send({
+        success: false,
+        error: 'You must be a member of the club to join this squad',
+      });
+    }
+
+    // Check if already in squad
+    const existingMembership = await prisma.squadMembership.findUnique({
+      where: {
+        squadId_userId: {
+          squadId,
+          userId,
+        },
+      },
+    });
+
+    if (existingMembership) {
+      return reply.status(409).send({
+        success: false,
+        error: 'You are already a member of this squad',
+      });
+    }
+
+    await prisma.squadMembership.create({
+      data: {
+        squadId,
+        userId,
+        role: 'member',
+      },
+    });
+
+    return {
+      success: true,
+      message: `Joined ${squad.name}`,
+      data: {
+        squadId: squad.id,
+        squadName: squad.name,
+        clubId: squad.clubId,
+        clubName: squad.club.name,
+      },
+    };
+  });
+
+  // Leave squad
+  fastify.post<{ Params: { squadId: string } }>('/squads/:squadId/leave', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = request.authUser!.id;
+    const { squadId } = request.params;
+
+    const membership = await prisma.squadMembership.findUnique({
+      where: {
+        squadId_userId: {
+          squadId,
+          userId,
+        },
+      },
+    });
+
+    if (!membership) {
+      return reply.status(404).send({
+        success: false,
+        error: 'You are not a member of this squad',
+      });
+    }
+
+    await prisma.squadMembership.delete({
+      where: { id: membership.id },
+    });
+
+    return {
+      success: true,
+      message: 'Left the squad',
     };
   });
 
@@ -1220,6 +1421,20 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         success: false,
         error: 'Member not found',
       });
+    }
+
+    // If promoting to admin, check we don't exceed 3 admins
+    if (role === 'admin' && targetMembership.role !== 'admin') {
+      const adminCount = await prisma.clubMembership.count({
+        where: { clubId, role: 'admin' },
+      });
+
+      if (adminCount >= 3) {
+        return reply.status(400).send({
+          success: false,
+          error: 'This club already has the maximum of 3 admins.',
+        });
+      }
     }
 
     // If demoting from admin, check there's at least one other admin

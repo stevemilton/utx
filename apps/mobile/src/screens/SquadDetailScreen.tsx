@@ -20,23 +20,24 @@ interface SquadMember {
   id: string;
   name: string;
   avatarUrl?: string;
-  totalMeters: number;
-  weeklyMeters: number;
+  role?: 'captain' | 'member';
+  joinedAt?: string;
 }
 
 interface Squad {
   id: string;
   name: string;
+  inviteCode?: string;
   club: {
     id: string;
     name: string;
+    verified?: boolean;
   };
   memberCount: number;
-  weeklyMeters: number;
-  monthlyMeters: number;
   members: SquadMember[];
   isMember: boolean;
-  isOwner: boolean;
+  isClubMember: boolean;
+  userRole?: 'captain' | 'member' | null;
 }
 
 export const SquadDetailScreen: React.FC = () => {
@@ -117,16 +118,6 @@ export const SquadDetailScreen: React.FC = () => {
     );
   };
 
-  const formatDistance = (meters: number): string => {
-    if (meters >= 1000000) {
-      return `${(meters / 1000000).toFixed(1)}M`;
-    }
-    if (meters >= 1000) {
-      return `${(meters / 1000).toFixed(1)}K`;
-    }
-    return `${meters}`;
-  };
-
   const navigateToProfile = (userId: string) => {
     navigation.navigate('UserProfile', { userId });
   };
@@ -200,8 +191,8 @@ export const SquadDetailScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Join/Leave Button */}
-        {!squad.isOwner && (
+        {/* Join/Leave Button - only show if user is a club member */}
+        {squad.isClubMember && (
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -228,36 +219,33 @@ export const SquadDetailScreen: React.FC = () => {
           </TouchableOpacity>
         )}
 
+        {/* Not a club member notice */}
+        {!squad.isClubMember && (
+          <View style={styles.notMemberNotice}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.notMemberText}>
+              Join {squad.club.name} to become a member of this squad
+            </Text>
+          </View>
+        )}
+
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{squad.memberCount}</Text>
             <Text style={styles.statLabel}>Members</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatDistance(squad.weeklyMeters)}m</Text>
-            <Text style={styles.statLabel}>This Week</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatDistance(squad.monthlyMeters)}m</Text>
-            <Text style={styles.statLabel}>This Month</Text>
-          </View>
         </View>
 
         {/* Members */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Members</Text>
-          {squad.members.map((member, index) => (
+          {squad.members.map((member) => (
             <TouchableOpacity
               key={member.id}
               style={styles.memberItem}
               onPress={() => navigateToProfile(member.id)}
             >
-              <View style={styles.memberRank}>
-                <Text style={styles.rankText}>{index + 1}</Text>
-              </View>
               <View style={styles.memberAvatar}>
                 <Text style={styles.memberAvatarText}>
                   {member.name.charAt(0).toUpperCase()}
@@ -265,11 +253,13 @@ export const SquadDetailScreen: React.FC = () => {
               </View>
               <View style={styles.memberInfo}>
                 <Text style={styles.memberName}>{member.name}</Text>
-                <Text style={styles.memberStats}>
-                  {formatDistance(member.weeklyMeters)}m this week •{' '}
-                  {formatDistance(member.totalMeters)}m total
-                </Text>
+                {member.role === 'captain' && (
+                  <View style={styles.captainBadge}>
+                    <Text style={styles.captainBadgeText}>Captain</Text>
+                  </View>
+                )}
               </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </TouchableOpacity>
           ))}
 
@@ -412,6 +402,20 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
+  notMemberNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  notMemberText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
   memberItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -420,19 +424,18 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  memberRank: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.sm,
+  captainBadge: {
+    backgroundColor: colors.primarySubtle,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
   },
-  rankText: {
-    color: colors.white,
+  captainBadgeText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
   memberAvatar: {
     width: 40,
@@ -455,11 +458,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-  },
-  memberStats: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
   },
   emptyState: {
     alignItems: 'center',

@@ -19,7 +19,10 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
 
       switch (type) {
         case 'following':
-          // Get users the current user follows
+        case 'all':
+        default:
+          // Get users the current user follows (for both 'all' and 'following')
+          // Feed should only show workouts from followed users, not all public workouts
           const following = await server.prisma.follow.findMany({
             where: { followerId: userId },
             select: { followingId: true },
@@ -46,32 +49,24 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
             userIds = [...new Set(squadMembers.map((m) => m.userId))];
           }
           break;
-
-        case 'all':
-        default:
-          // Show all workouts (global feed)
-          break;
       }
 
       const where: any = {};
 
-      if (type === 'all') {
-        // Global feed: show user's own workouts + others' public workouts
-        where.OR = [
-          { userId },
-          { isPublic: true },
-        ];
-      } else if (userIds.length > 0) {
-        // Following/squad feed: show user's own + others' public from the group
+      if (userIds.length > 0) {
+        // Feed: show user's own workouts + followed/squad users' public workouts
         where.AND = [
           { userId: { in: userIds } },
           {
             OR: [
-              { userId },
-              { isPublic: true },
+              { userId }, // Always show own workouts
+              { isPublic: true }, // Show others' public workouts only
             ],
           },
         ];
+      } else {
+        // No follows yet - just show user's own workouts
+        where.userId = userId;
       }
 
       if (cursor) {

@@ -87,9 +87,10 @@ export const ENDPOINTS = {
   squads: {
     list: (clubId: string) => `/clubs/${clubId}/squads`,
     create: (clubId: string) => `/clubs/${clubId}/squads`,
-    get: (id: string) => `/squads/${id}`,
-    join: (id: string) => `/squads/${id}/join`,
-    leave: (id: string) => `/squads/${id}/leave`,
+    get: (id: string) => `/clubs/squads/${id}`,
+    join: (id: string) => `/clubs/squads/${id}/join`,
+    leave: (id: string) => `/clubs/squads/${id}/leave`,
+    joinByCode: '/clubs/squads/join',
   },
 
   // Social

@@ -40,7 +40,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 };
 
 function AppContent() {
-  const { isLoading, setLoading, isAuthenticated } = useAuthStore();
+  const { isLoading, setLoading, isAuthenticated, updateProfile } = useAuthStore();
   const handledCallbackRef = useRef(false);
   const navigationRef = useNavigationContainerRef();
 
@@ -67,6 +67,8 @@ function AppContent() {
           if (code) {
             const response = await api.stravaCallback(code);
             if (response.success) {
+              // Update auth store immediately so UI updates
+              updateProfile({ stravaConnected: true });
               Alert.alert(
                 'Strava Connected!',
                 'Your workouts will now automatically sync to Strava.',

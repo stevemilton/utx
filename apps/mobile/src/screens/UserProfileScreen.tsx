@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -51,7 +52,24 @@ export const UserProfileScreen: React.FC = () => {
     try {
       const response = await api.getUserProfile(userId);
       if (response.success && response.data) {
-        setProfile(response.data as UserProfile);
+        const data = response.data as any;
+        // Normalize API response to handle both old and new formats
+        const normalizedProfile: UserProfile = {
+          id: data.id,
+          name: data.name,
+          avatarUrl: data.avatarUrl,
+          club: data.club,
+          squad: data.squad,
+          // Handle both new format and old format (_count)
+          totalMeters: data.totalMeters ?? 0,
+          totalWorkouts: data.totalWorkouts ?? data._count?.workouts ?? 0,
+          followersCount: data.followersCount ?? data._count?.followers ?? 0,
+          followingCount: data.followingCount ?? data._count?.following ?? 0,
+          isFollowing: data.isFollowing ?? false,
+          isPrivate: data.isPrivate ?? false,
+          pbs: data.pbs,
+        };
+        setProfile(normalizedProfile);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -157,11 +175,15 @@ export const UserProfileScreen: React.FC = () => {
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {profile.name?.charAt(0).toUpperCase() || '?'}
-            </Text>
-          </View>
+          {profile.avatarUrl ? (
+            <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {profile.name?.charAt(0).toUpperCase() || '?'}
+              </Text>
+            </View>
+          )}
           <Text style={styles.name}>{profile.name}</Text>
           {profile.club && (
             <Text style={styles.clubName}>
@@ -312,6 +334,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     marginBottom: spacing.md,
   },
   avatarText: {
