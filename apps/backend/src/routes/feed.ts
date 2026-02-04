@@ -55,8 +55,23 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
 
       const where: any = {};
 
-      if (type !== 'all' && userIds.length > 0) {
-        where.userId = { in: userIds };
+      if (type === 'all') {
+        // Global feed: show user's own workouts + others' public workouts
+        where.OR = [
+          { userId },
+          { isPublic: true },
+        ];
+      } else if (userIds.length > 0) {
+        // Following/squad feed: show user's own + others' public from the group
+        where.AND = [
+          { userId: { in: userIds } },
+          {
+            OR: [
+              { userId },
+              { isPublic: true },
+            ],
+          },
+        ];
       }
 
       if (cursor) {
@@ -148,7 +163,13 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
       const userIds = [...new Set(squadMembers.map((m) => m.userId))];
 
       const workouts = await server.prisma.workout.findMany({
-        where: { userId: { in: userIds } },
+        where: {
+          userId: { in: userIds },
+          OR: [
+            { userId },
+            { isPublic: true },
+          ],
+        },
         take: 20,
         orderBy: { workoutDate: 'desc' },
         include: {
@@ -214,7 +235,13 @@ export async function feedRoutes(server: FastifyInstance): Promise<void> {
       userIds.push(userId);
 
       const workouts = await server.prisma.workout.findMany({
-        where: { userId: { in: userIds } },
+        where: {
+          userId: { in: userIds },
+          OR: [
+            { userId },
+            { isPublic: true },
+          ],
+        },
         take: 20,
         orderBy: { workoutDate: 'desc' },
         include: {

@@ -346,7 +346,12 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
       // Otherwise, default to the authenticated user's workouts
       if (userId) {
         where.userId = userId;
+        // If viewing someone else's workouts, only show public ones
+        if (currentUserId !== userId) {
+          where.isPublic = true;
+        }
       } else if (currentUserId) {
+        // Viewing own workouts - show all (public and private)
         where.userId = currentUserId;
       } else {
         // No auth and no userId specified - return empty to prevent data leak

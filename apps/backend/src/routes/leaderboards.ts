@@ -51,10 +51,11 @@ export async function leaderboardsRoutes(fastify: FastifyInstance) {
     }
 
     if (metric === 'distance') {
-      // Total metres leaderboard
+      // Total metres leaderboard - only public workouts
       const leaderboard = await prisma.workout.groupBy({
         by: ['userId'],
         where: {
+          isPublic: true,
           ...(startDate ? { workoutDate: { gte: startDate } } : {}),
           user: Object.keys(userFilter).length > 0 ? userFilter : undefined,
         },
@@ -77,10 +78,11 @@ export async function leaderboardsRoutes(fastify: FastifyInstance) {
       });
       const userMap = new Map(users.map(u => [u.id, u]));
 
-      // Find current user's rank
+      // Find current user's rank - only public workouts
       const allRankings = await prisma.workout.groupBy({
         by: ['userId'],
         where: {
+          isPublic: true,
           ...(startDate ? { workoutDate: { gte: startDate } } : {}),
         },
         _sum: {
@@ -222,10 +224,12 @@ export async function leaderboardsRoutes(fastify: FastifyInstance) {
     }
 
     if (metric === 'distance') {
+      // Club leaderboard - only public workouts
       const leaderboard = await prisma.workout.groupBy({
         by: ['userId'],
         where: {
           userId: { in: memberIds },
+          isPublic: true,
           ...(startDate ? { workoutDate: { gte: startDate } } : {}),
         },
         _sum: {
@@ -314,10 +318,12 @@ export async function leaderboardsRoutes(fastify: FastifyInstance) {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
+    // Squad leaderboard - only public workouts
     const leaderboard = await prisma.workout.groupBy({
       by: ['userId'],
       where: {
         userId: { in: memberIds },
+        isPublic: true,
         ...(startDate ? { workoutDate: { gte: startDate } } : {}),
       },
       _sum: {
