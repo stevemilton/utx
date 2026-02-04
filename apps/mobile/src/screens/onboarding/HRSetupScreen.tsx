@@ -50,6 +50,14 @@ export const HRSetupScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Back Button */}
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+
           <View style={styles.progress}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: '60%' }]} />
@@ -224,6 +232,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: spacing.lg,
+  },
+  backButton: {
+    marginBottom: spacing.md,
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
   },
   progress: {
     flexDirection: 'row',

@@ -8,6 +8,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../const
 import { useAuthStore } from '../../stores/authStore';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { api } from '../../services/api';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -51,6 +53,7 @@ const slides: TutorialSlide[] = [
 ];
 
 export const TutorialScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { setOnboardingComplete, updateProfile } = useAuthStore();
   const { data: onboardingData, reset: resetOnboarding } = useOnboardingStore();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -165,6 +168,14 @@ export const TutorialScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+      </TouchableOpacity>
+
       <View style={styles.progress}>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: '100%' }]} />
@@ -223,6 +234,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  backButton: {
+    marginLeft: spacing.lg,
+    marginTop: spacing.lg,
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
   },
   progress: {
     flexDirection: 'row',

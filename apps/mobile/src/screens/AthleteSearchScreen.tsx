@@ -267,10 +267,10 @@ const styles = StyleSheet.create({
   followButtonText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+    color: colors.textInverse,
   },
   followingButtonText: {
-    color: colors.textSecondary,
+    color: colors.textInverse,
   },
   loadingContainer: {
     flex: 1,

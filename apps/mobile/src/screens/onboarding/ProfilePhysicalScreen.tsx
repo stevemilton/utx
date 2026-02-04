@@ -79,6 +79,14 @@ export const ProfilePhysicalScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+      </TouchableOpacity>
+
       <View style={styles.progress}>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: '40%' }]} />
@@ -274,6 +282,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: spacing.lg,
+  },
+  backButton: {
+    marginBottom: spacing.md,
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
   },
   progress: {
     flexDirection: 'row',
