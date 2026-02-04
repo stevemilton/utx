@@ -12,10 +12,12 @@ import {
   Modal,
   TextInput,
   Clipboard,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, fontSize, fontWeight } from '../constants/theme';
 import { api } from '../services/api';
 import type { RootStackScreenProps } from '../navigation/types';
@@ -48,6 +50,7 @@ interface Club {
   id: string;
   name: string;
   location?: string;
+  logoUrl?: string;
   inviteCode: string;
   memberCount: number;
   weeklyMeters: number;
@@ -80,6 +83,7 @@ export const ClubDetailScreen: React.FC = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [selectedMember, setSelectedMember] = useState<ClubMember | null>(null);
   const [showMemberActions, setShowMemberActions] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const fetchClub = useCallback(async () => {
     try {
@@ -339,6 +343,79 @@ export const ClubDetailScreen: React.FC = () => {
     }
   };
 
+  const handleChangeLogo = async () => {
+    if (club?.userRole !== 'admin') return;
+
+    Alert.alert('Change Logo', 'Choose an option', [
+      { text: 'Take Photo', onPress: handleTakeLogo },
+      { text: 'Choose from Library', onPress: handlePickLogo },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handlePickLogo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please grant photo library access to change the club logo.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadLogo(result.assets[0].uri);
+    }
+  };
+
+  const handleTakeLogo = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please grant camera access to take a club logo photo.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadLogo(result.assets[0].uri);
+    }
+  };
+
+  const uploadLogo = async (imageUri: string) => {
+    setUploadingLogo(true);
+    try {
+      const response = await api.uploadClubLogo(clubId, imageUri);
+      if (response.success && response.data?.logoUrl) {
+        setClub((prev) => prev ? { ...prev, logoUrl: response.data.logoUrl } : null);
+        Alert.alert('Success', 'Club logo updated!');
+      } else {
+        Alert.alert('Error', response.error || 'Failed to upload logo');
+      }
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      Alert.alert('Error', 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const handleMemberPress = (member: ClubMember) => {
     if (club?.userRole !== 'admin') {
       navigateToProfile(member.id);
@@ -460,11 +537,42 @@ export const ClubDetailScreen: React.FC = () => {
       >
         {/* Club Info */}
         <View style={styles.clubHeader}>
-          <View style={styles.clubIcon}>
-            <Text style={styles.clubIconText}>
-              {club.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          {club.userRole === 'admin' ? (
+            <TouchableOpacity
+              style={styles.clubLogoContainer}
+              onPress={handleChangeLogo}
+              disabled={uploadingLogo}
+            >
+              {uploadingLogo ? (
+                <View style={styles.clubIcon}>
+                  <ActivityIndicator size="small" color={colors.white} />
+                </View>
+              ) : club.logoUrl ? (
+                <Image source={{ uri: club.logoUrl }} style={styles.clubLogo} />
+              ) : (
+                <View style={styles.clubIcon}>
+                  <Text style={styles.clubIconText}>
+                    {club.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.cameraOverlay}>
+                <Ionicons name="camera" size={14} color={colors.white} />
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.clubLogoContainer}>
+              {club.logoUrl ? (
+                <Image source={{ uri: club.logoUrl }} style={styles.clubLogo} />
+              ) : (
+                <View style={styles.clubIcon}>
+                  <Text style={styles.clubIconText}>
+                    {club.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
           <Text style={styles.clubName}>{club.name}</Text>
           {club.location && (
             <Text style={styles.clubLocation}>{club.location}</Text>
@@ -892,6 +1000,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
+  clubLogoContainer: {
+    position: 'relative',
+    marginBottom: spacing.md,
+  },
+  clubLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+  },
   clubIcon: {
     width: 80,
     height: 80,
@@ -899,12 +1016,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.md,
   },
   clubIconText: {
     color: colors.white,
     fontSize: 36,
     fontWeight: fontWeight.bold,
+  },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: colors.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
   },
   clubName: {
     fontSize: fontSize.xxl,

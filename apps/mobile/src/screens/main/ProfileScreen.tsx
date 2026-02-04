@@ -26,6 +26,7 @@ interface Club {
   id: string;
   name: string;
   location?: string;
+  logoUrl?: string;
   memberCount: number;
 }
 
@@ -395,20 +396,27 @@ export const ProfileScreen: React.FC = () => {
           {userClubs.length > 0 ? (
             <View style={styles.clubsList}>
               {userClubs.map((club) => (
-                <View key={club.id} style={styles.clubItem}>
-                  <View style={styles.clubIcon}>
-                    <Text style={styles.clubIconText}>{club.name.charAt(0)}</Text>
-                  </View>
+                <TouchableOpacity
+                  key={club.id}
+                  style={styles.clubItem}
+                  onPress={() => navigation.navigate('ClubDetail', { clubId: club.id })}
+                  activeOpacity={0.7}
+                >
+                  {club.logoUrl ? (
+                    <Image source={{ uri: club.logoUrl }} style={styles.clubLogo} />
+                  ) : (
+                    <View style={styles.clubIcon}>
+                      <Text style={styles.clubIconText}>{club.name.charAt(0)}</Text>
+                    </View>
+                  )}
                   <View style={styles.clubInfo}>
                     <Text style={styles.clubName}>{club.name}</Text>
                     {club.location && (
                       <Text style={styles.clubLocation}>{club.location}</Text>
                     )}
                   </View>
-                  <TouchableOpacity onPress={() => handleLeaveClub(club.id)}>
-                    <Text style={styles.leaveText}>Leave</Text>
-                  </TouchableOpacity>
-                </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+                </TouchableOpacity>
               ))}
             </View>
           ) : (
@@ -857,10 +865,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  clubLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    marginRight: spacing.md,
+  },
   clubIcon: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 8,
     backgroundColor: colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',

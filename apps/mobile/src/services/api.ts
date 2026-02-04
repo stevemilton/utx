@@ -480,6 +480,26 @@ class ApiService {
     });
   }
 
+  async uploadClubLogo(clubId: string, imageUri: string) {
+    const token = useAuthStore.getState().token;
+    const formData = new FormData();
+    formData.append('logo', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'club-logo.jpg',
+    } as unknown as Blob);
+
+    const response = await fetch(`${this.baseUrl}${ENDPOINTS.clubs.uploadLogo(clubId)}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    return response.json();
+  }
+
   // Social endpoints
   async followUser(userId: string) {
     return this.request(ENDPOINTS.social.follow(userId), {

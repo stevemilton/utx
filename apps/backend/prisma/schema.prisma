@@ -137,6 +137,7 @@ model Club {
   id         String           @id @default(cuid())
   name       String
   location   String?
+  logoUrl    String?
   verified   Boolean          @default(false)
   inviteCode String           @unique
   createdAt  DateTime         @default(now())

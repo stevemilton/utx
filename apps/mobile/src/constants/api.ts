@@ -80,6 +80,7 @@ export const ENDPOINTS = {
     search: '/clubs/search',
     join: (id: string) => `/clubs/${id}/join`,
     leave: (id: string) => `/clubs/${id}/leave`,
+    uploadLogo: (id: string) => `/clubs/${id}/logo`,
   },
 
   // Squads

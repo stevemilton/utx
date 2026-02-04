@@ -29,6 +29,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         id: true,
         name: true,
         location: true,
+        logoUrl: true,
         verified: true,
         _count: {
           select: { memberships: true, squads: true },
@@ -43,6 +44,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         id: club.id,
         name: club.name,
         location: club.location,
+        logoUrl: club.logoUrl,
         verified: club.verified,
         memberCount: club._count.memberships,
         squadCount: club._count.squads,
@@ -123,7 +125,9 @@ export async function clubsRoutes(fastify: FastifyInstance) {
         id: club.id,
         name: club.name,
         location: club.location,
+        logoUrl: club.logoUrl,
         verified: club.verified,
+        inviteCode: userMembership ? club.inviteCode : undefined,
         memberCount: club._count.memberships,
         squads: club.squads.map(s => ({
           id: s.id,
@@ -480,6 +484,7 @@ export async function clubsRoutes(fastify: FastifyInstance) {
             id: true,
             name: true,
             location: true,
+            logoUrl: true,
             verified: true,
           },
         },
@@ -1254,5 +1259,60 @@ export async function clubsRoutes(fastify: FastifyInstance) {
       data: { inviteCode: updatedClub.inviteCode },
       message: 'Invite code regenerated successfully',
     };
+  });
+
+  // Upload club logo (admin only)
+  fastify.post<{ Params: { id: string } }>('/:id/logo', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const userId = request.authUser!.id;
+    const { id: clubId } = request.params;
+
+    // Check if user is admin
+    const membership = await prisma.clubMembership.findUnique({
+      where: { clubId_userId: { clubId, userId } },
+    });
+
+    if (!membership || membership.role !== 'admin') {
+      return reply.status(403).send({
+        success: false,
+        error: 'Only club admins can upload a logo',
+      });
+    }
+
+    try {
+      // Handle multipart form data
+      const data = await request.file();
+
+      if (!data) {
+        return reply.status(400).send({
+          success: false,
+          error: 'No file uploaded',
+        });
+      }
+
+      // Read file buffer and convert to base64 data URL
+      const buffer = await data.toBuffer();
+      const base64 = buffer.toString('base64');
+      const mimeType = data.mimetype || 'image/jpeg';
+      const logoUrl = `data:${mimeType};base64,${base64}`;
+
+      // Update club with logo URL
+      const club = await prisma.club.update({
+        where: { id: clubId },
+        data: { logoUrl },
+      });
+
+      return reply.send({
+        success: true,
+        data: { logoUrl: club.logoUrl },
+      });
+    } catch (error) {
+      request.log.error(error, 'Club logo upload failed');
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to upload logo',
+      });
+    }
   });
 }
