@@ -76,8 +76,21 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const loadUserClubs = async () => {
-    // TODO: Load user's clubs from API
-    // For now, using placeholder
+    try {
+      const response = await api.getMyClubs();
+      if (response.success && response.data) {
+        const data = response.data as { clubs: Array<{ id: string; name: string; location?: string; logoUrl?: string; role: string }> };
+        setUserClubs(data.clubs.map(club => ({
+          id: club.id,
+          name: club.name,
+          location: club.location,
+          logoUrl: club.logoUrl,
+          memberCount: 0, // Not returned by API but not needed for display
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading user clubs:', error);
+    }
   };
 
   const handleEditProfile = () => {

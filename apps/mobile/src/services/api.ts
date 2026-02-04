@@ -388,7 +388,7 @@ class ApiService {
   }
 
   async getMyClubs() {
-    return this.request(ENDPOINTS.clubs.list);
+    return this.request('/clubs/my');
   }
 
   async leaveClub(clubId: string) {
