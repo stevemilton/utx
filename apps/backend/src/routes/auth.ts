@@ -6,6 +6,15 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 import { Sentry } from '../instrument.js';
+import {
+  registerEmailSchema,
+  loginEmailSchema,
+  verifyEmailSchema,
+  requestResetSchema,
+  resetPasswordSchema,
+  resendVerificationSchema,
+} from '../schemas/index.js';
+import { validateBody } from '../utils/validate.js';
 
 interface RegisterBody {
   firebaseToken: string;
@@ -668,26 +677,22 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   // Register with email/password
   server.post<{ Body: EmailRegisterBody }>(
     '/register-email',
+    {
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request: FastifyRequest<{ Body: EmailRegisterBody }>, reply: FastifyReply) => {
-      const { email, password, name } = request.body;
+      // Validate inputs with Zod
+      const validated = validateBody(registerEmailSchema, request.body, reply);
+      if (!validated) return;
+
+      const { email: normalizedEmail, password, name } = validated;
 
       try {
-        // Validate inputs
-        const emailError = validateEmail(email);
-        if (emailError) {
-          return reply.status(400).send({ success: false, error: emailError });
-        }
-
-        const passwordError = validatePassword(password);
-        if (passwordError) {
-          return reply.status(400).send({ success: false, error: passwordError });
-        }
-
-        if (!name || name.trim().length < 1) {
-          return reply.status(400).send({ success: false, error: 'Name is required' });
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
 
         // Check if email already exists
         const existingUser = await server.prisma.user.findFirst({
@@ -795,13 +800,13 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   server.post<{ Body: VerifyEmailBody }>(
     '/verify-email',
     async (request: FastifyRequest<{ Body: VerifyEmailBody }>, reply: FastifyReply) => {
-      const { token } = request.body;
+      // Validate inputs with Zod
+      const validated = validateBody(verifyEmailSchema, request.body, reply);
+      if (!validated) return;
+
+      const { token } = validated;
 
       try {
-        if (!token) {
-          return reply.status(400).send({ success: false, error: 'Verification token is required' });
-        }
-
         // Find user by verification token
         const user = await server.prisma.user.findFirst({
           where: { emailVerificationToken: token },
@@ -855,20 +860,22 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   // Login with email/password
   server.post<{ Body: EmailLoginBody }>(
     '/login-email',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request: FastifyRequest<{ Body: EmailLoginBody }>, reply: FastifyReply) => {
-      const { email, password } = request.body;
+      // Validate inputs with Zod
+      const validated = validateBody(loginEmailSchema, request.body, reply);
+      if (!validated) return;
+
+      const { email: normalizedEmail, password } = validated;
 
       try {
-        // Validate inputs
-        if (!email || !password) {
-          return reply.status(400).send({
-            success: false,
-            error: 'Email and password are required',
-          });
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-
         // Find user by email
         const user = await server.prisma.user.findFirst({
           where: { firebaseUid: `email:${normalizedEmail}` },
@@ -960,16 +967,22 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   // Request password reset
   server.post<{ Body: RequestResetBody }>(
     '/request-reset',
+    {
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '5 minutes',
+        },
+      },
+    },
     async (request: FastifyRequest<{ Body: RequestResetBody }>, reply: FastifyReply) => {
-      const { email } = request.body;
+      // Validate inputs with Zod
+      const validated = validateBody(requestResetSchema, request.body, reply);
+      if (!validated) return;
+
+      const { email: normalizedEmail } = validated;
 
       try {
-        if (!email) {
-          return reply.status(400).send({ success: false, error: 'Email is required' });
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-
         // Always return success to prevent email enumeration
         const successResponse = {
           success: true,
@@ -1044,19 +1057,22 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   // Reset password - POST handler for form submission
   server.post<{ Body: ResetPasswordBody }>(
     '/reset-password',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '5 minutes',
+        },
+      },
+    },
     async (request: FastifyRequest<{ Body: ResetPasswordBody }>, reply: FastifyReply) => {
-      const { token, password } = request.body;
+      // Validate inputs with Zod
+      const validated = validateBody(resetPasswordSchema, request.body, reply);
+      if (!validated) return;
+
+      const { token, password } = validated;
 
       try {
-        if (!token) {
-          return reply.status(400).send({ success: false, error: 'Reset token is required' });
-        }
-
-        const passwordError = validatePassword(password);
-        if (passwordError) {
-          return reply.status(400).send({ success: false, error: passwordError });
-        }
-
         // Find user by reset token
         const user = await server.prisma.user.findFirst({
           where: { passwordResetToken: token },
@@ -1109,16 +1125,22 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
   // Resend verification email
   server.post<{ Body: ResendVerificationBody }>(
     '/resend-verification',
+    {
+      config: {
+        rateLimit: {
+          max: 2,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request: FastifyRequest<{ Body: ResendVerificationBody }>, reply: FastifyReply) => {
-      const { email } = request.body;
+      // Validate inputs with Zod
+      const validated = validateBody(resendVerificationSchema, request.body, reply);
+      if (!validated) return;
+
+      const { email: normalizedEmail } = validated;
 
       try {
-        if (!email) {
-          return reply.status(400).send({ success: false, error: 'Email is required' });
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-
         // Always return success to prevent email enumeration
         const successResponse = {
           success: true,
