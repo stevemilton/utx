@@ -124,6 +124,14 @@ export const VerifyEmailScreen: React.FC = () => {
           <Text style={styles.differentEmailText}>Use a different email</Text>
         </TouchableOpacity>
 
+        {/* Back to Login - for users who have verified */}
+        <View style={styles.verifiedContainer}>
+          <Text style={styles.verifiedText}>Already verified your email?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('EmailLogin')}>
+            <Text style={styles.loginLink}>Log in here</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Help Text */}
         <View style={styles.helpContainer}>
           <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
@@ -221,5 +229,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textTertiary,
     flex: 1,
+  },
+  verifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xl,
+  },
+  verifiedText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+  loginLink: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
 });
