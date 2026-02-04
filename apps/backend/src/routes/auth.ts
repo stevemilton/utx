@@ -5,6 +5,7 @@ import jwksClient from 'jwks-rsa';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
+import { Sentry } from '../instrument.js';
 
 interface RegisterBody {
   firebaseToken: string;
@@ -944,6 +945,10 @@ export async function authRoutes(server: FastifyInstance): Promise<void> {
         });
       } catch (error) {
         request.log.error(error, 'Email login failed');
+        Sentry.captureException(error, {
+          tags: { route: 'login-email' },
+          extra: { email: email?.substring(0, 3) + '***' },
+        });
         return reply.status(500).send({
           success: false,
           error: 'Login failed. Please try again.',

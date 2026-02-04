@@ -1,5 +1,6 @@
 import { getApiConfig, ENDPOINTS } from '../constants/api';
 import { useAuthStore } from '../stores/authStore';
+import * as Sentry from '@sentry/react-native';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -82,6 +83,12 @@ class ApiService {
           error: 'Request timed out',
         };
       }
+
+      // Capture unexpected errors in Sentry
+      Sentry.captureException(error, {
+        tags: { endpoint, method },
+        extra: { body: body ? JSON.stringify(body).substring(0, 500) : undefined },
+      });
 
       return {
         success: false,
@@ -204,15 +211,20 @@ class ApiService {
       name: 'avatar.jpg',
     } as unknown as Blob);
 
-    const response = await fetch(`${this.baseUrl}${ENDPOINTS.users.updateAvatar}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}${ENDPOINTS.users.updateAvatar}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-    return response.json();
+      return response.json();
+    } catch (error) {
+      Sentry.captureException(error, { tags: { operation: 'uploadAvatar' } });
+      throw error;
+    }
   }
 
   // Workout endpoints
@@ -245,15 +257,20 @@ class ApiService {
       name: 'erg-screen.jpg',
     } as unknown as Blob);
 
-    const response = await fetch(`${this.baseUrl}${ENDPOINTS.workouts.upload}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}${ENDPOINTS.workouts.upload}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-    return response.json();
+      return response.json();
+    } catch (error) {
+      Sentry.captureException(error, { tags: { operation: 'uploadWorkoutPhoto' } });
+      throw error;
+    }
   }
 
   async processOcr(imageBase64: string) {
@@ -489,15 +506,20 @@ class ApiService {
       name: 'club-logo.jpg',
     } as unknown as Blob);
 
-    const response = await fetch(`${this.baseUrl}${ENDPOINTS.clubs.uploadLogo(clubId)}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}${ENDPOINTS.clubs.uploadLogo(clubId)}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-    return response.json();
+      return response.json();
+    } catch (error) {
+      Sentry.captureException(error, { tags: { operation: 'uploadClubLogo', clubId } });
+      throw error;
+    }
   }
 
   // Social endpoints

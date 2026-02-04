@@ -3,6 +3,7 @@ import { WorkoutType, PbCategory, MachineType } from '@prisma/client';
 import OpenAI from 'openai';
 import { calculateEffortScore, calculateUtxEffortScore, type UserProfile, type Interval } from '../utils/effortScore.js';
 import { generateCoachingInsight } from '../utils/aiCoaching.js';
+import { Sentry } from '../instrument.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -1130,6 +1131,12 @@ Return ONLY valid JSON. No explanation or markdown.`;
         }
 
         request.log.error({ errorDetail: error?.message }, 'OCR error detail');
+
+        // Capture OCR errors in Sentry
+        Sentry.captureException(error, {
+          tags: { route: 'ocr', errorCode: error?.code },
+          extra: { errorMessage, imageSize: imageBase64?.length },
+        });
 
         return reply.status(500).send({
           success: false,
