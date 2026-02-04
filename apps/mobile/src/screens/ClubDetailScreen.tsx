@@ -15,7 +15,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, fontSize, fontWeight } from '../constants/theme';
@@ -102,6 +102,13 @@ export const ClubDetailScreen: React.FC = () => {
   useEffect(() => {
     fetchClub();
   }, [fetchClub]);
+
+  // Refetch club data when screen regains focus (e.g., after approving join requests)
+  useFocusEffect(
+    useCallback(() => {
+      fetchClub();
+    }, [fetchClub])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -199,7 +206,10 @@ export const ClubDetailScreen: React.FC = () => {
     );
   };
 
-  const formatDistance = (meters: number): string => {
+  const formatDistance = (meters?: number): string => {
+    if (meters === undefined || meters === null) {
+      return '0';
+    }
     if (meters >= 1000000) {
       return `${(meters / 1000000).toFixed(1)}M`;
     }
