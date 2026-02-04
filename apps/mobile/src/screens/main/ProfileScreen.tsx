@@ -477,6 +477,21 @@ export const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Admin Panel - only visible to super admins */}
+        {user?.isSuperAdmin && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Admin</Text>
+            <View style={styles.sectionContent}>
+              <SettingRow
+                iconName="shield-checkmark-outline"
+                title="Admin Panel"
+                subtitle="Manage club verifications"
+                onPress={() => navigation.navigate('Admin' as never)}
+              />
+            </View>
+          </View>
+        )}
+
         {/* Account */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>

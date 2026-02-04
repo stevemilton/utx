@@ -86,6 +86,7 @@ export type RootStackParamList = {
   ClubSearch: undefined;
   AthleteSearch: undefined;
   CreateClub: undefined;
+  Admin: undefined;
 };
 
 // Screen prop types

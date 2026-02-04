@@ -17,6 +17,7 @@ export interface UserProfile {
   restingHr?: number; // Optional, defaults to 50 if not provided
   stravaConnected: boolean;
   isPublic: boolean;
+  isSuperAdmin?: boolean; // Platform super admin flag
 }
 
 interface AuthState {

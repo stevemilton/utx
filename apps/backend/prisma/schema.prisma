@@ -30,6 +30,7 @@ model User {
   isPublic             Boolean             @default(true)
   stravaConnected      Boolean             @default(false)
   stravaAutoSync       Boolean             @default(true)
+  isSuperAdmin         Boolean             @default(false)
   stravaRefreshToken   String?
   stravaAccessToken    String?
   stravaTokenExpiresAt DateTime?

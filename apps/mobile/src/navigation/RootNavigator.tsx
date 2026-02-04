@@ -21,6 +21,7 @@ import { ClubSearchScreen } from '../screens/ClubSearchScreen';
 import { CreateClubScreen } from '../screens/CreateClubScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { AthleteSearchScreen } from '../screens/AthleteSearchScreen';
+import { AdminScreen } from '../screens/AdminScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -69,6 +70,7 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen name="CreateClub" component={CreateClubScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
+            <Stack.Screen name="Admin" component={AdminScreen} />
           </Stack.Group>
         </>
       )}

@@ -2,30 +2,64 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { sendClubVerifiedEmail, sendClubRejectedEmail, sendClubCreatedNotification } from '../services/email';
 
 // Platform Admin Routes
-// Protected by ADMIN_API_KEY environment variable
+// Protected by ADMIN_API_KEY or user with isSuperAdmin=true
 export async function adminRoutes(fastify: FastifyInstance) {
   const prisma = fastify.prisma;
 
-  // Admin authentication middleware
-  const adminAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+  // Super admin authentication middleware
+  // Accepts either: 1) x-admin-key header, or 2) authenticated user with isSuperAdmin=true
+  const superAdminAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    // Option 1: API key auth (for scripts/automation)
     const adminKey = request.headers['x-admin-key'];
     const expectedKey = process.env.ADMIN_API_KEY;
 
-    if (!expectedKey) {
-      fastify.log.error('ADMIN_API_KEY not configured');
-      return reply.status(503).send({
-        success: false,
-        error: 'Admin API not configured',
-      });
+    if (adminKey && expectedKey && adminKey === expectedKey) {
+      return; // Authorized via API key
     }
 
-    if (!adminKey || adminKey !== expectedKey) {
+    // Option 2: User-based auth (for in-app admin)
+    // First try to authenticate the user
+    try {
+      await fastify.authenticate(request, reply);
+    } catch {
+      // If no valid token, and no valid API key, return 401
+      if (!adminKey) {
+        return reply.status(401).send({
+          success: false,
+          error: 'Authentication required',
+        });
+      }
+      // Invalid API key
       return reply.status(401).send({
         success: false,
         error: 'Invalid admin key',
       });
     }
+
+    // Check if authenticated user is a super admin
+    const authUser = (request as any).authUser;
+    if (!authUser) {
+      return reply.status(401).send({
+        success: false,
+        error: 'Authentication required',
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: { isSuperAdmin: true },
+    });
+
+    if (!user?.isSuperAdmin) {
+      return reply.status(403).send({
+        success: false,
+        error: 'Super admin access required',
+      });
+    }
   };
+
+  // Legacy alias for backwards compatibility
+  const adminAuth = superAdminAuth;
 
   // List pending (unverified) clubs
   fastify.get('/clubs/pending', {

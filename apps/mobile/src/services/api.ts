@@ -548,6 +548,31 @@ class ApiService {
       body: { autoSync },
     });
   }
+
+  // ============================================
+  // SUPER ADMIN ENDPOINTS
+  // ============================================
+
+  async getPendingClubs() {
+    return this.request('/admin/clubs/pending');
+  }
+
+  async getAllClubs() {
+    return this.request('/admin/clubs');
+  }
+
+  async verifyClub(clubId: string) {
+    return this.request(`/admin/clubs/${clubId}/verify`, {
+      method: 'POST',
+    });
+  }
+
+  async rejectClub(clubId: string, reason?: string) {
+    return this.request(`/admin/clubs/${clubId}/reject`, {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
+    });
+  }
 }
 
 export const api = new ApiService();
