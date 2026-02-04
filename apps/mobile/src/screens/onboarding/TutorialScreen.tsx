@@ -33,7 +33,7 @@ const slides: TutorialSlide[] = [
   {
     id: '1',
     iconName: 'camera-outline',
-    title: 'Snap your screen',
+    title: 'Snap your workout data',
     description:
       'After your workout, take a photo of your erg screen. UTx handles the rest.',
   },

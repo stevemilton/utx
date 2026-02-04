@@ -163,7 +163,7 @@ export const HRSetupScreen: React.FC = () => {
                       color={colors.primary}
                     />
                     <Text style={styles.optionalTitle}>
-                      Add Resting Heart Rate (Optional)
+                      Resting Heart Rate (Good for accurate data)
                     </Text>
                   </View>
                   <Ionicons
