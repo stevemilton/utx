@@ -171,8 +171,8 @@ export const UserProfileScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Follow Button */}
-        {!isOwnProfile && (
+        {/* Follow Button - only show if not own profile and not private */}
+        {!isOwnProfile && !profile.isPrivate && (
           <TouchableOpacity
             style={[
               styles.followButton,
@@ -202,7 +202,7 @@ export const UserProfileScreen: React.FC = () => {
             <Ionicons name="lock-closed" size={48} color={colors.textTertiary} />
             <Text style={styles.privateProfileTitle}>This Profile is Private</Text>
             <Text style={styles.privateProfileText}>
-              Follow this user to see their stats, workouts, and personal bests.
+              This user has chosen to keep their profile private.
             </Text>
           </View>
         )}

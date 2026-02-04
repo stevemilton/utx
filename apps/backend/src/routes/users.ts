@@ -363,6 +363,26 @@ export async function usersRoutes(server: FastifyInstance): Promise<void> {
         });
       }
 
+      // Check if target user exists and allows followers
+      const targetUser = await server.prisma.user.findUnique({
+        where: { id: userId },
+        select: { isPublic: true },
+      });
+
+      if (!targetUser) {
+        return reply.status(404).send({
+          success: false,
+          error: 'User not found',
+        });
+      }
+
+      if (!targetUser.isPublic) {
+        return reply.status(403).send({
+          success: false,
+          error: "This user doesn't allow followers",
+        });
+      }
+
       try {
         await server.prisma.follow.create({
           data: {
