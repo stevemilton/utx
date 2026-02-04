@@ -308,7 +308,7 @@ export async function workoutRoutes(server: FastifyInstance): Promise<void> {
     { preHandler: [server.optionalAuth] },
     async (request: FastifyRequest<{ Querystring: GetWorkoutsQuery }>, reply: FastifyReply) => {
       const { limit = 20, cursor, userId } = request.query;
-      const currentUserId = (request as any).userId; // From auth middleware
+      const currentUserId = request.authUser?.id; // From auth middleware
 
       const where: any = {};
 
