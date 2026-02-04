@@ -21,6 +21,7 @@ import { clubsRoutes } from './routes/clubs.js';
 import { leaderboardsRoutes } from './routes/leaderboards.js';
 import { stravaRoutes } from './routes/strava.js';
 import { adminRoutes } from './routes/admin.js';
+import { consentRoutes } from './routes/consent.js';
 
 dotenv.config();
 
@@ -87,6 +88,7 @@ server.register(clubsRoutes, { prefix: '/clubs' });
 server.register(leaderboardsRoutes, { prefix: '/leaderboards' });
 server.register(stravaRoutes, { prefix: '/strava' });
 server.register(adminRoutes, { prefix: '/admin' });
+server.register(consentRoutes, { prefix: '/consent' });
 
 // Error handler
 server.setErrorHandler((error: Error & { statusCode?: number }, request, reply) => {

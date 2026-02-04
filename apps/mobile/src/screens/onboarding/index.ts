@@ -1,3 +1,4 @@
+export { ConsentScreen } from './ConsentScreen';
 export { ProfileIdentityScreen } from './ProfileIdentityScreen';
 export { ProfilePhysicalScreen } from './ProfilePhysicalScreen';
 export { HRSetupScreen } from './HRSetupScreen';

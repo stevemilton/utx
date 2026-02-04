@@ -535,6 +535,12 @@ export const ProfileScreen: React.FC = () => {
               />
             )}
             <SettingRow
+              iconName="shield-outline"
+              title="Privacy Settings"
+              subtitle="Manage your data preferences"
+              onPress={() => navigation.navigate('PrivacySettings' as never)}
+            />
+            <SettingRow
               iconName="lock-closed-outline"
               title="Privacy Policy"
               onPress={() => Linking.openURL('https://kind-lotus-435.notion.site/Privacy-Policy-2fcfeff7be0080718fccc8b94e22580d')}

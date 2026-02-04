@@ -60,9 +60,9 @@ export const HRSetupScreen: React.FC = () => {
 
           <View style={styles.progress}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '60%' }]} />
+              <View style={[styles.progressFill, { width: '66.66%' }]} />
             </View>
-            <Text style={styles.progressText}>3 of 5</Text>
+            <Text style={styles.progressText}>4 of 6</Text>
           </View>
 
           <View style={styles.content}>

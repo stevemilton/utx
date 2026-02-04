@@ -18,6 +18,7 @@ export type AuthStackParamList = {
 
 // Onboarding Stack
 export type OnboardingStackParamList = {
+  Consent: undefined;
   ProfileIdentity: undefined;
   ProfilePhysical: undefined;
   HRSetup: undefined;
@@ -87,6 +88,7 @@ export type RootStackParamList = {
   AthleteSearch: undefined;
   CreateClub: undefined;
   Admin: undefined;
+  PrivacySettings: undefined;
 };
 
 // Screen prop types

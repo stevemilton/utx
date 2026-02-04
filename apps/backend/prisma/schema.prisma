@@ -57,6 +57,7 @@ model User {
   personalBests        PersonalBest[]
   workoutReactions     WorkoutReaction[]
   workoutComments      WorkoutComment[]
+  consents             UserConsent[]
 
   @@map("users")
 }
@@ -297,4 +298,30 @@ enum JoinRequestStatus {
   approved
   rejected
   cancelled
+}
+
+// User consent records for GDPR compliance
+model UserConsent {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentType     ConsentType
+  granted         Boolean
+  policyVersion   String      // e.g., "1.0.0"
+  ipAddress       String?
+  appVersion      String?
+  grantedAt       DateTime    @default(now())
+  revokedAt       DateTime?
+
+  @@unique([userId, consentType])
+  @@index([userId])
+  @@map("user_consents")
+}
+
+enum ConsentType {
+  terms           // Terms & Conditions (REQUIRED)
+  privacy         // Privacy Policy (REQUIRED)
+  marketing       // Marketing Communications (OPTIONAL)
+  analytics       // Usage Analytics (OPTIONAL)
+  coach_sharing   // Coach Data Sharing (OPTIONAL)
 }

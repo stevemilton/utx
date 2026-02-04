@@ -4,6 +4,7 @@ import type { OnboardingStackParamList } from './types';
 import { colors } from '../constants/theme';
 
 // Import screens
+import { ConsentScreen } from '../screens/onboarding/ConsentScreen';
 import { ProfileIdentityScreen } from '../screens/onboarding/ProfileIdentityScreen';
 import { ProfilePhysicalScreen } from '../screens/onboarding/ProfilePhysicalScreen';
 import { HRSetupScreen } from '../screens/onboarding/HRSetupScreen';
@@ -21,6 +22,7 @@ export const OnboardingNavigator: React.FC = () => {
         animation: 'slide_from_right',
       }}
     >
+      <Stack.Screen name="Consent" component={ConsentScreen} />
       <Stack.Screen name="ProfileIdentity" component={ProfileIdentityScreen} />
       <Stack.Screen name="ProfilePhysical" component={ProfilePhysicalScreen} />
       <Stack.Screen name="HRSetup" component={HRSetupScreen} />

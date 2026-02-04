@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 
+export interface ConsentData {
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
+  marketingOptIn: boolean;
+  analyticsOptIn: boolean;
+  coachSharingOptIn: boolean;
+}
+
 export interface OnboardingData {
+  // Consent screen
+  consents: ConsentData;
+
   // Identity screen
   displayName: string;
   avatarUri: string | null;
@@ -20,6 +31,8 @@ interface OnboardingState {
   data: OnboardingData;
 
   // Actions
+  setConsents: (consents: ConsentData) => void;
+  setCoachSharingOptIn: (optIn: boolean) => void;
   setIdentity: (name: string, avatarUri: string | null) => void;
   setPhysicalStats: (stats: {
     heightCm: number;
@@ -34,7 +47,16 @@ interface OnboardingState {
   getData: () => OnboardingData;
 }
 
+const initialConsents: ConsentData = {
+  termsAccepted: false,
+  privacyAccepted: false,
+  marketingOptIn: false,
+  analyticsOptIn: false,
+  coachSharingOptIn: false,
+};
+
 const initialData: OnboardingData = {
+  consents: { ...initialConsents },
   displayName: '',
   avatarUri: null,
   heightCm: 0,
@@ -46,6 +68,19 @@ const initialData: OnboardingData = {
 
 export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   data: { ...initialData },
+
+  setConsents: (consents) =>
+    set((state) => ({
+      data: { ...state.data, consents },
+    })),
+
+  setCoachSharingOptIn: (optIn) =>
+    set((state) => ({
+      data: {
+        ...state.data,
+        consents: { ...state.data.consents, coachSharingOptIn: optIn },
+      },
+    })),
 
   setIdentity: (displayName, avatarUri) =>
     set((state) => ({

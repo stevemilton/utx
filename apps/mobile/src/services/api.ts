@@ -619,6 +619,37 @@ class ApiService {
       body: reason ? { reason } : undefined,
     });
   }
+
+  // ============================================
+  // CONSENT ENDPOINTS
+  // ============================================
+
+  async saveConsents(data: {
+    consents: Array<{ consentType: string; granted: boolean }>;
+    appVersion: string;
+  }) {
+    return this.request('/consent', {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  async getConsents() {
+    return this.request('/consent');
+  }
+
+  async updateConsent(type: string, granted: boolean, appVersion: string) {
+    return this.request(`/consent/${type}`, {
+      method: 'PATCH',
+      body: { granted, appVersion },
+    });
+  }
+
+  async checkRequiredConsents() {
+    return this.request<{ hasRequiredConsents: boolean; missingConsents: string[] }>(
+      '/consent/required'
+    );
+  }
 }
 
 export const api = new ApiService();

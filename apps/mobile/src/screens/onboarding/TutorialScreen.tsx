@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../constants/theme';
+import Constants from 'expo-constants';
 import { useAuthStore } from '../../stores/authStore';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { api } from '../../services/api';
@@ -109,10 +110,27 @@ export const TutorialScreen: React.FC = () => {
         }
       }
 
-      // Save to backend
+      // Save profile to backend
       const response = await api.updateProfile(profileUpdates);
 
       if (response.success) {
+        // Save consents to backend
+        const appVersion = Constants.expoConfig?.version || '1.0.0';
+        const consentsToSave = [
+          { consentType: 'terms', granted: onboardingData.consents.termsAccepted },
+          { consentType: 'privacy', granted: onboardingData.consents.privacyAccepted },
+          { consentType: 'marketing', granted: onboardingData.consents.marketingOptIn },
+          { consentType: 'analytics', granted: onboardingData.consents.analyticsOptIn },
+          { consentType: 'coach_sharing', granted: onboardingData.consents.coachSharingOptIn },
+        ];
+
+        try {
+          await api.saveConsents({ consents: consentsToSave, appVersion });
+        } catch (consentError) {
+          console.error('Failed to save consents:', consentError);
+          // Continue even if consent save fails - profile is saved
+        }
+
         // Update local auth store with the profile data
         updateProfile({
           name: onboardingData.displayName || undefined,
@@ -180,7 +198,7 @@ export const TutorialScreen: React.FC = () => {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: '100%' }]} />
         </View>
-        <Text style={styles.progressText}>5 of 5</Text>
+        <Text style={styles.progressText}>6 of 6</Text>
       </View>
 
       <View style={styles.content}>

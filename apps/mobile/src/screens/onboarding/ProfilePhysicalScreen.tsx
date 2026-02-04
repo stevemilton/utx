@@ -89,9 +89,9 @@ export const ProfilePhysicalScreen: React.FC = () => {
 
       <View style={styles.progress}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: '40%' }]} />
+          <View style={[styles.progressFill, { width: '50%' }]} />
         </View>
-        <Text style={styles.progressText}>2 of 5</Text>
+        <Text style={styles.progressText}>3 of 6</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
