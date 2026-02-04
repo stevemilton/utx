@@ -217,9 +217,9 @@ export const ClubDetailScreen: React.FC = () => {
     navigation.navigate('UserProfile', { userId });
   };
 
-  // Admin functions
+  // Fetch all members (visible to all club members)
   const fetchMembers = useCallback(async () => {
-    if (!club?.userRole || club.userRole !== 'admin') return;
+    if (!club?.isMember) return;
 
     setLoadingMembers(true);
     try {
@@ -232,13 +232,13 @@ export const ClubDetailScreen: React.FC = () => {
     } finally {
       setLoadingMembers(false);
     }
-  }, [clubId, club?.userRole]);
+  }, [clubId, club?.isMember]);
 
   useEffect(() => {
-    if (club?.userRole === 'admin') {
+    if (club?.isMember) {
       fetchMembers();
     }
-  }, [club?.userRole, fetchMembers]);
+  }, [club?.isMember, fetchMembers]);
 
   const handleEditClub = () => {
     if (!club) return;
@@ -730,8 +730,8 @@ export const ClubDetailScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Admin: Members List */}
-        {club.userRole === 'admin' && (
+        {/* All Members List (visible to all members) */}
+        {club.isMember && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>All Members ({members.length})</Text>
@@ -767,7 +767,9 @@ export const ClubDetailScreen: React.FC = () => {
                       )}
                     </View>
                   </View>
-                  <Ionicons name="ellipsis-vertical" size={18} color={colors.textTertiary} />
+                  {club.userRole === 'admin' && (
+                    <Ionicons name="ellipsis-vertical" size={18} color={colors.textTertiary} />
+                  )}
                 </TouchableOpacity>
               ))
             )}
